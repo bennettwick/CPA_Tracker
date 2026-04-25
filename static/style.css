@@ -185,6 +185,7 @@ button[type="submit"]:hover,
 .hour-sub.shortfall { color: var(--red); }
 
 /* ---- Degree conferred toggle ---- */
+.req-divider { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0 0.75rem; }
 .degree-question-row {
   display: flex;
   align-items: center;
@@ -192,8 +193,7 @@ button[type="submit"]:hover,
   gap: 1rem;
 }
 .degree-question { flex: 1; }
-.degree-question h2 { margin-bottom: 0.3rem; }
-.degree-note { font-size: 0.88rem; color: var(--gray); margin: 0; }
+.degree-note { font-size: 0.83rem; color: var(--gray); margin: 0.2rem 0 0; }
 .degree-toggle { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .toggle-btn {
   padding: 0.45rem 1.25rem;

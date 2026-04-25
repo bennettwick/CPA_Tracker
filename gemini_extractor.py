@@ -69,8 +69,8 @@ For each course, assign a cpa_category from this list of recognized {state_name}
 
 If a course does not match any topic above, use one of these fallback categories:
 - general_business — business courses not matching a specific topic above
-- other — non-accounting, non-business courses (e.g., English, PE, electives)
-- unclear — only if you genuinely cannot determine the subject area
+- other — anything that is clearly not business or accounting: humanities, sciences, PE, health, orientation, generic transfer credit placeholders (e.g., "199T", "ELEC 100", "TR CREDIT"), low-numbered courses (099–199) with no accounting/business connection, and any course whose name gives no indication it could be CPA-relevant
+- unclear — ONLY when the course name genuinely suggests it might count toward CPA requirements but you cannot determine the specific category (e.g., "Business Applications", "Accounting Seminar", "Financial Topics"). If you cannot tell whether the course is even business-related, use "other" instead
 
 For the "level" field:
 - Use "grad" ONLY if the transcript explicitly marks the course as graduate-level (e.g., course number 5000+, "Graduate" section header, "G" prefix, or similar)

@@ -172,9 +172,9 @@ function renderSummaryBanner() {
 }
 
 function renderDegreeCard(degreeInfo) {
-  var card = document.getElementById('degree-card');
-  if (!degreeInfo) { card.style.display = 'none'; return; }
-  card.style.display = '';
+  var section = document.getElementById('degree-section');
+  if (!degreeInfo) { section.style.display = 'none'; return; }
+  section.style.display = '';
   document.getElementById('degree-note').textContent = degreeInfo.note;
   updateDegreeToggleUI(_degreeConferred);
 }
