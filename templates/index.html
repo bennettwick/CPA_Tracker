@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CPA Exam Eligibility Checker</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <h1>CPA Exam Eligibility Checker</h1>
+    <p>Upload your college transcript to see if you meet your state's CPA exam requirements.</p>
+  </header>
+
+  <main>
+
+    <!-- Upload Section -->
+    <section id="upload-section">
+      <div class="card">
+        <h2>Check Your Eligibility</h2>
+        <form id="upload-form">
+
+          <div class="form-group">
+            <label for="state-select">Select Your State</label>
+            <select id="state-select" name="state" required>
+              <option value="">Loading states...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="transcript-input">Upload Transcript (PDF)</label>
+            <input type="file" id="transcript-input" name="transcript" accept=".pdf" required>
+            <span class="hint">Only PDF files are accepted. Max 10 MB.</span>
+          </div>
+
+          <div id="error-msg" class="error-msg" style="display:none"></div>
+
+          <button type="submit" id="submit-btn">Check Eligibility</button>
+
+        </form>
+      </div>
+    </section>
+
+    <!-- Loading Section -->
+    <section id="loading-section" style="display:none">
+      <div class="card center">
+        <div class="spinner"></div>
+        <p>Analyzing your transcript with AI&hellip;<br>This may take 15&ndash;30 seconds.</p>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results-section" style="display:none">
+
+      <div id="summary-banner" class="summary-banner">
+        <span id="summary-icon"></span>
+        <span id="summary-text"></span>
+      </div>
+
+      <div class="results-grid">
+
+        <!-- Required Topics -->
+        <div class="card">
+          <h2>Required Course Topics</h2>
+          <ul id="topic-list" class="topic-list"></ul>
+        </div>
+
+        <!-- Total Hour Requirements -->
+        <div class="card">
+          <h2>Total Hour Requirements</h2>
+          <div id="hour-totals"></div>
+        </div>
+
+      </div>
+
+      <!-- Grade Flags -->
+      <div id="grade-flags-card" class="card warning-card" style="display:none">
+        <h2>&#9888; Grade Warnings</h2>
+        <p>The following required courses have a grade below the minimum required (C):</p>
+        <ul id="grade-flags-list"></ul>
+      </div>
+
+      <!-- Unclear Courses -->
+      <div id="unclear-card" class="card warning-card" style="display:none">
+        <h2>&#10067; Courses Needing Review</h2>
+        <p>The AI could not categorize the following courses. Please review them manually to see if they meet any requirements:</p>
+        <ul id="unclear-list"></ul>
+      </div>
+
+      <!-- Manual Checks -->
+      <div id="manual-checks-card" class="card info-card" style="display:none">
+        <h2>&#8505; Manual Verification Required</h2>
+        <p>These requirements cannot be verified from a transcript:</p>
+        <ul id="manual-checks-list"></ul>
+      </div>
+
+      <!-- Level Detection Warning (Louisiana) -->
+      <div id="level-warning-card" class="card info-card" style="display:none">
+        <h2>&#8505; Course Level Note</h2>
+        <p>Some courses on your transcript did not have a clear undergrad or graduate designation. Louisiana does not allow mixing undergrad and grad credits, so those courses were counted as undergrad. If some are actually graduate-level, your results may differ.</p>
+      </div>
+
+      <!-- Extracted Courses (Collapsible) -->
+      <div class="card">
+        <button class="collapsible-btn" id="toggle-courses">Show All Extracted Courses &#9660;</button>
+        <div id="courses-table-wrap" style="display:none">
+          <table id="courses-table">
+            <thead>
+              <tr>
+                <th>Course Name</th>
+                <th>Credits</th>
+                <th>Grade</th>
+                <th>Year</th>
+                <th>Level</th>
+                <th>Category</th>
+              </tr>
+            </thead>
+            <tbody id="courses-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="center" style="margin-top: 1.5rem;">
+        <button id="start-over-btn">&#8592; Check Another Transcript</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    <p>This tool provides an estimate only. Always verify your eligibility with your state board of accountancy.</p>
+  </footer>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

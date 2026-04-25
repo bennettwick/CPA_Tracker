@@ -1,0 +1,155 @@
+{
+  "arkansas": {
+    "state": "Arkansas",
+    "board_url": "https://www.arkansaslegislature.gov/",
+    "exam_eligibility": {
+      "degree_required": true,
+      "accounting": {
+        "undergraduate_hours_required": 27,
+        "graduate_hours_required": 18,
+        "combination_allowed": true,
+        "min_grade": "C",
+        "required_topics": {
+          "financial_accounting": {
+            "credits_required": 3,
+            "aliases": [
+              "intermediate accounting",
+              "financial accounting",
+              "intermediate financial accounting"
+            ]
+          },
+          "management_accounting": {
+            "credits_required": 3,
+            "aliases": [
+              "cost accounting",
+              "managerial accounting",
+              "management accounting"
+            ]
+          },
+          "governmental_nonprofit": {
+            "credits_required": 3,
+            "aliases": [
+              "governmental accounting",
+              "nonprofit accounting",
+              "not-for-profit accounting",
+              "institutional accounting",
+              "governmental and nonprofit accounting"
+            ]
+          },
+          "taxation": {
+            "credits_required": 3,
+            "aliases": [
+              "federal taxation",
+              "income tax",
+              "fundamentals of taxation",
+              "advanced income tax",
+              "individual taxation"
+            ]
+          },
+          "auditing": {
+            "credits_required": 3,
+            "aliases": [
+              "auditing",
+              "attestation",
+              "auditing and attestation",
+              "principles of auditing"
+            ]
+          },
+          "accounting_information_systems": {
+            "credits_required": 3,
+            "aliases": [
+              "accounting information systems",
+              "AIS",
+              "accounting systems",
+              "computerized accounting"
+            ]
+          }
+        }
+      },
+      "business": {
+        "undergraduate_hours_required": 24,
+        "graduate_hours_required": 16,
+        "combination_allowed": true,
+        "note": "Must be non-accounting business courses"
+      }
+    }
+  },
+
+  "louisiana": {
+    "state": "Louisiana",
+    "board_url": "https://www.cpaboard.state.la.us/",
+    "exam_eligibility": {
+      "degree_required": true,
+      "min_age": 18,
+      "residency_days_required": 120,
+      "accounting": {
+        "undergraduate_hours_required": 24,
+        "graduate_hours_required": 21,
+        "combination_allowed": false,
+        "required_topics": {
+          "financial_accounting": {
+            "credits_required": 6,
+            "graduate_credits_required": 3,
+            "aliases": [
+              "intermediate accounting",
+              "financial accounting",
+              "intermediate financial accounting",
+              "financial reporting"
+            ]
+          },
+          "management_accounting": {
+            "credits_required": 3,
+            "aliases": [
+              "cost accounting",
+              "managerial accounting",
+              "management accounting"
+            ]
+          },
+          "taxation": {
+            "credits_required": 3,
+            "aliases": [
+              "income tax",
+              "federal taxation",
+              "tax accounting",
+              "individual taxation"
+            ]
+          },
+          "auditing": {
+            "credits_required": 3,
+            "aliases": [
+              "auditing",
+              "external auditing",
+              "auditing and assurance",
+              "principles of auditing"
+            ]
+          },
+          "accounting_elective": {
+            "credits_required": 9,
+            "aliases": [
+              "accounting elective",
+              "accounting",
+              "advanced accounting",
+              "forensic accounting",
+              "accounting capstone"
+            ]
+          }
+        }
+      },
+      "business": {
+        "undergraduate_hours_required": 24,
+        "combination_allowed": false,
+        "required_topics": {
+          "business_law": {
+            "credits_required": 3,
+            "aliases": [
+              "business law",
+              "commercial law",
+              "legal environment of business",
+              "business and society"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
