@@ -15,6 +15,7 @@ MODEL_NAME = "gemini-2.5-flash"
 FALLBACK_CATEGORIES = ["general_business", "other", "unclear"]
 
 COURSE_SCHEMA = """{
+  "graduation_status": "conferred" or "in_progress" or "unknown",
   "courses": [
     {
       "name": "<exact course name from transcript>",
@@ -81,6 +82,11 @@ For the "is_upper_level" field:
 - Use false for lower-division courses (course number 100-299 or 1000-2999), including "Principles of Accounting I/II", "Introduction to Accounting", "Survey of Accounting", or any course clearly labeled as introductory
 - Use null only if no course number is shown and the course name gives no clear indication of level
 - When in doubt based on name: "Intermediate", "Advanced", "Cost", "Auditing", "Tax", "Federal" → true; "Principles of", "Introduction to", "Intro to", "Survey of" → false
+
+For the "graduation_status" field (top-level, not per course):
+- Use "conferred" if the transcript clearly shows a bachelor's degree has been awarded (e.g., degree award date, "Conferred", "Degree Awarded", graduation noted, degree title listed as completed)
+- Use "in_progress" if the transcript shows the degree is not yet complete (e.g., "In Progress", "Expected Graduation", "Anticipated", "Current Student", "Enrolled", courses marked as currently registered or graded "IP")
+- Use "unknown" if the transcript gives no clear indication of degree completion status
 
 Return ONLY valid JSON. No markdown. No code fences. No explanation. Start with {{ and end with }}.
 

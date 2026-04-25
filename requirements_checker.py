@@ -159,18 +159,61 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
             "shortfall_message": shortfall,
         }
 
-    total_req = float(elig.get("total_hours_required", 0))
-    if total_req > 0:
-        total_earned = round(sum(float(c.get("credits", 0)) for c in courses), 1)
-        total_met = total_earned >= total_req
-        result["total"] = {
-            "required": total_req,
-            "earned": total_earned,
-            "met": total_met,
-            "shortfall_message": None if total_met else f"Need {total_req - total_earned:.0f} more total credit hours",
+    return result
+
+
+def check_degree_conferred(
+    courses: list, state_req: dict, graduation_status: str,
+    topic_results: list, hour_totals: dict,
+) -> dict:
+    if not state_req["exam_eligibility"].get("degree_required"):
+        return None
+
+    if graduation_status == "conferred":
+        return {
+            "assumed_conferred": True,
+            "confidence": "detected",
+            "note": "Your transcript indicates a degree has been awarded.",
+        }
+    if graduation_status == "in_progress":
+        return {
+            "assumed_conferred": False,
+            "confidence": "detected",
+            "note": "Your transcript shows the degree is still in progress.",
         }
 
-    return result
+    # Infer from credit count and requirement completion
+    total_earned = sum(float(c.get("credits", 0)) for c in courses)
+    if total_earned < 120:
+        return {
+            "assumed_conferred": False,
+            "confidence": "inferred",
+            "note": (
+                f"Graduation status unclear on transcript. "
+                f"Only {round(total_earned):.0f} total credits found — assumed not yet conferred."
+            ),
+        }
+
+    all_topics_met = all(t["met"] for t in topic_results)
+    all_hours_met = all(v["met"] for v in hour_totals.values())
+    if all_topics_met and all_hours_met:
+        return {
+            "assumed_conferred": True,
+            "confidence": "inferred",
+            "note": (
+                "Graduation status unclear on transcript. "
+                "Assumed conferred — 120+ credits and all required coursework appear met."
+            ),
+        }
+
+    return {
+        "assumed_conferred": False,
+        "confidence": "inferred",
+        "note": (
+            "Graduation status unclear on transcript. "
+            "Assumed not yet conferred — required coursework not fully met."
+        ),
+    }
 
 
 def check_grade_thresholds(courses: list, state_req: dict) -> list:
@@ -219,7 +262,7 @@ def collect_unclear_courses(courses: list) -> list:
     return [c for c in courses if c.get("cpa_category") == "unclear"]
 
 
-def check_requirements(courses: list, state: str) -> dict:
+def check_requirements(courses: list, state: str, graduation_status: str = "unknown") -> dict:
     state_req = load_state_requirements(state)
     courses = _deduplicate_courses(courses)
 
@@ -228,15 +271,17 @@ def check_requirements(courses: list, state: str) -> dict:
     grade_flags = check_grade_thresholds(courses, state_req)
     unclear = collect_unclear_courses(courses)
     manual_checks = collect_manual_checks(state_req)
+    degree_info = check_degree_conferred(courses, state_req, graduation_status, topic_results, hour_totals)
 
     has_unclear = len(unclear) > 0
     all_topics_met = all(t["met"] for t in topic_results)
     all_hours_met = all(v["met"] for v in hour_totals.values())
     no_grade_flags = len(grade_flags) == 0
+    degree_ok = degree_info is None or degree_info["assumed_conferred"]
 
-    if all_topics_met and all_hours_met and no_grade_flags and not has_unclear:
+    if degree_ok and all_topics_met and all_hours_met and no_grade_flags and not has_unclear:
         summary = "eligible"
-    elif has_unclear or grade_flags:
+    elif has_unclear or grade_flags or (degree_info and not degree_info["assumed_conferred"] and degree_info["confidence"] == "inferred"):
         summary = "needs_review"
     else:
         summary = "not_eligible"
@@ -251,5 +296,6 @@ def check_requirements(courses: list, state: str) -> dict:
         "grade_flags": grade_flags,
         "unclear_courses": unclear,
         "manual_checks": manual_checks,
+        "degree_info": degree_info,
         "level_detection_warning": has_null_level and state.lower() == "louisiana",
     }

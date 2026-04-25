@@ -58,9 +58,10 @@ def check():
         return jsonify({"error": "An unexpected error occurred while analyzing your transcript. Please try again."}), 500
 
     courses = extraction.get("courses", [])
+    graduation_status = extraction.get("graduation_status", "unknown")
 
     try:
-        results = check_requirements(courses, state)
+        results = check_requirements(courses, state, graduation_status)
     except Exception:
         traceback.print_exc()
         return jsonify({"error": "An unexpected error occurred while checking requirements. Please try again."}), 500

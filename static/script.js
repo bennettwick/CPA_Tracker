@@ -77,7 +77,23 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
 document.getElementById('start-over-btn').addEventListener('click', function() {
   document.getElementById('upload-form').reset();
+  _results = null;
+  _degreeConferred = null;
   showSection('upload');
+});
+
+// ---- Degree conferred toggle ----
+
+document.getElementById('degree-yes-btn').addEventListener('click', function() {
+  _degreeConferred = true;
+  updateDegreeToggleUI(true);
+  renderSummaryBanner();
+});
+
+document.getElementById('degree-no-btn').addEventListener('click', function() {
+  _degreeConferred = false;
+  updateDegreeToggleUI(false);
+  renderSummaryBanner();
 });
 
 // ---- Toggle extracted courses table ----
@@ -91,10 +107,19 @@ document.getElementById('toggle-courses').addEventListener('click', function() {
     : 'Show All Extracted Courses &#9660;';
 });
 
+// ---- Results state ----
+
+var _results = null;
+var _degreeConferred = null;
+
 // ---- Render results ----
 
 function renderResults(results, courses) {
-  renderSummaryBanner(results.summary, results.state);
+  _results = results;
+  _degreeConferred = results.degree_info ? results.degree_info.assumed_conferred : null;
+
+  renderSummaryBanner();
+  renderDegreeCard(results.degree_info);
   renderTopicResults(results.topic_results);
   renderHourTotals(results.hour_totals);
   renderGradeFlags(results.grade_flags);
@@ -104,13 +129,33 @@ function renderResults(results, courses) {
   renderCoursesTable(courses);
 }
 
-function renderSummaryBanner(summary, state) {
-  var banner = document.getElementById('summary-banner');
-  var icon   = document.getElementById('summary-icon');
-  var text   = document.getElementById('summary-text');
+function calcSummary() {
+  if (!_results) return 'not_eligible';
+
+  if (_results.degree_info) {
+    if (!_degreeConferred) return 'not_eligible';
+  }
+  if (_results.grade_flags && _results.grade_flags.length > 0) return 'needs_review';
+  if (_results.unclear_courses && _results.unclear_courses.length > 0) return 'needs_review';
+
+  var allTopicsMet = (_results.topic_results || []).every(function(t) { return t.met; });
+  var allHoursMet = true;
+  if (_results.hour_totals) {
+    Object.keys(_results.hour_totals).forEach(function(k) {
+      if (!_results.hour_totals[k].met) allHoursMet = false;
+    });
+  }
+  return (allTopicsMet && allHoursMet) ? 'eligible' : 'not_eligible';
+}
+
+function renderSummaryBanner() {
+  var summary = calcSummary();
+  var banner  = document.getElementById('summary-banner');
+  var icon    = document.getElementById('summary-icon');
+  var text    = document.getElementById('summary-text');
+  var state   = _results ? _results.state : '';
 
   banner.className = 'summary-banner';
-
   if (summary === 'eligible') {
     banner.classList.add('eligible');
     icon.textContent = '✓';
@@ -124,6 +169,21 @@ function renderSummaryBanner(summary, state) {
     icon.textContent = '✗';
     text.textContent = state + ': You do not yet meet all exam eligibility requirements.';
   }
+}
+
+function renderDegreeCard(degreeInfo) {
+  var card = document.getElementById('degree-card');
+  if (!degreeInfo) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  document.getElementById('degree-note').textContent = degreeInfo.note;
+  updateDegreeToggleUI(_degreeConferred);
+}
+
+function updateDegreeToggleUI(conferred) {
+  var yesBtn = document.getElementById('degree-yes-btn');
+  var noBtn  = document.getElementById('degree-no-btn');
+  yesBtn.className = 'toggle-btn' + (conferred === true  ? ' active-yes' : '');
+  noBtn.className  = 'toggle-btn' + (conferred === false ? ' active-no'  : '');
 }
 
 function renderTopicResults(topicResults) {
@@ -169,16 +229,6 @@ function renderHourTotals(hourTotals) {
     var target = h.required_undergrad || h.required_grad;
     renderHourBar(container, label, h.earned_total, target, h.met ? 'met' : 'unmet', h.shortfall_message);
   });
-
-  if (hourTotals.total) {
-    var t = hourTotals.total;
-    if (container.children.length > 0) {
-      var divider = document.createElement('hr');
-      divider.className = 'hour-divider';
-      container.appendChild(divider);
-    }
-    renderHourBar(container, 'Total Credit Hours', t.earned, t.required, 'total', t.shortfall_message);
-  }
 }
 
 function renderHourBar(container, label, earned, required, colorClass, shortfall) {
@@ -201,7 +251,7 @@ function renderHourBar(container, label, earned, required, colorClass, shortfall
 
   var numLabel = document.createElement('div');
   numLabel.className = 'hour-numeric';
-  numLabel.textContent = earned + ' cr earned / ' + required + ' cr needed';
+  numLabel.textContent = earned + ' / ' + required;
 
   row.appendChild(labelEl);
   row.appendChild(barWrap);

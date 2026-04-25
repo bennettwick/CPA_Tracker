@@ -180,11 +180,38 @@ button[type="submit"]:hover,
 }
 .progress-bar.met   { background: var(--green); }
 .progress-bar.unmet { background: #bbc5d4; }
-.progress-bar.total { background: var(--blue); }
 .hour-numeric { font-size: 0.82rem; color: #444; font-weight: 500; margin-bottom: 0.15rem; }
 .hour-sub { font-size: 0.8rem; color: var(--gray); }
 .hour-sub.shortfall { color: var(--red); }
-.hour-divider { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+
+/* ---- Degree conferred toggle ---- */
+.degree-question-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.degree-question { flex: 1; }
+.degree-question h2 { margin-bottom: 0.3rem; }
+.degree-note { font-size: 0.88rem; color: var(--gray); margin: 0; }
+.degree-toggle { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.toggle-btn {
+  padding: 0.45rem 1.25rem;
+  border: 2px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.15s;
+}
+.toggle-btn:hover { border-color: #999; color: #333; }
+.toggle-btn.active-yes { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+.toggle-btn.active-no  { background: var(--red-bg);   border-color: var(--red);   color: var(--red);   }
+@media (max-width: 480px) {
+  .degree-question-row { flex-direction: column; align-items: flex-start; }
+}
 
 /* ---- Warning / Info Cards ---- */
 .warning-card { border-left: 4px solid var(--yellow); }
