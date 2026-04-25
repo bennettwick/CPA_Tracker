@@ -180,8 +180,11 @@ button[type="submit"]:hover,
 }
 .progress-bar.met   { background: var(--green); }
 .progress-bar.unmet { background: #bbc5d4; }
+.progress-bar.total { background: var(--blue); }
+.hour-numeric { font-size: 0.82rem; color: #444; font-weight: 500; margin-bottom: 0.15rem; }
 .hour-sub { font-size: 0.8rem; color: var(--gray); }
 .hour-sub.shortfall { color: var(--red); }
+.hour-divider { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
 
 /* ---- Warning / Info Cards ---- */
 .warning-card { border-left: 4px solid var(--yellow); }

@@ -4,6 +4,7 @@
     "board_url": "https://www.arkansaslegislature.gov/",
     "exam_eligibility": {
       "degree_required": true,
+      "total_hours_required": 120,
       "accounting": {
         "undergraduate_hours_required": 27,
         "graduate_hours_required": 18,
@@ -81,6 +82,7 @@
     "board_url": "https://www.cpaboard.state.la.us/",
     "exam_eligibility": {
       "degree_required": true,
+      "total_hours_required": 120,
       "min_age": 18,
       "residency_days_required": 120,
       "accounting": {

@@ -160,50 +160,61 @@ function renderTopicResults(topicResults) {
 function renderHourTotals(hourTotals) {
   var container = document.getElementById('hour-totals');
   container.innerHTML = '';
-
   if (!hourTotals) return;
 
-  Object.keys(hourTotals).forEach(function(section) {
+  ['accounting', 'business'].forEach(function(section) {
     var h = hourTotals[section];
+    if (!h) return;
     var label = section.charAt(0).toUpperCase() + section.slice(1) + ' Hours';
-
-    // Determine progress percentage against the undergrad requirement (most common baseline)
     var target = h.required_undergrad || h.required_grad;
-    var earned = h.earned_total;
-    var pct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0;
-
-    var row = document.createElement('div');
-    row.className = 'hour-row';
-
-    var labelDiv = document.createElement('div');
-    labelDiv.className = 'hour-label';
-    labelDiv.textContent = label;
-
-    var barWrap = document.createElement('div');
-    barWrap.className = 'progress-bar-wrap';
-
-    var bar = document.createElement('div');
-    bar.className = 'progress-bar ' + (h.met ? 'met' : 'unmet');
-    bar.style.width = pct + '%';
-
-    barWrap.appendChild(bar);
-
-    var sub = document.createElement('div');
-    sub.className = 'hour-sub' + (h.shortfall_message ? ' shortfall' : '');
-
-    if (h.met) {
-      sub.textContent = earned + ' credits earned — requirement met';
-    } else if (h.shortfall_message) {
-      sub.textContent = h.shortfall_message;
-    } else {
-      sub.textContent = earned + ' of ' + target + ' credits earned';
-    }
-
-    row.appendChild(labelDiv);
-    row.appendChild(barWrap);
-    row.appendChild(sub);
-    container.appendChild(row);
+    renderHourBar(container, label, h.earned_total, target, h.met ? 'met' : 'unmet', h.shortfall_message);
   });
+
+  if (hourTotals.total) {
+    var t = hourTotals.total;
+    if (container.children.length > 0) {
+      var divider = document.createElement('hr');
+      divider.className = 'hour-divider';
+      container.appendChild(divider);
+    }
+    renderHourBar(container, 'Total Credit Hours', t.earned, t.required, 'total', t.shortfall_message);
+  }
+}
+
+function renderHourBar(container, label, earned, required, colorClass, shortfall) {
+  var pct = required > 0 ? Math.min(100, Math.round((earned / required) * 100)) : 0;
+
+  var row = document.createElement('div');
+  row.className = 'hour-row';
+
+  var labelEl = document.createElement('div');
+  labelEl.className = 'hour-label';
+  labelEl.textContent = label;
+
+  var barWrap = document.createElement('div');
+  barWrap.className = 'progress-bar-wrap';
+
+  var bar = document.createElement('div');
+  bar.className = 'progress-bar ' + colorClass;
+  bar.style.width = pct + '%';
+  barWrap.appendChild(bar);
+
+  var numLabel = document.createElement('div');
+  numLabel.className = 'hour-numeric';
+  numLabel.textContent = earned + ' cr earned / ' + required + ' cr needed';
+
+  row.appendChild(labelEl);
+  row.appendChild(barWrap);
+  row.appendChild(numLabel);
+
+  if (shortfall) {
+    var sub = document.createElement('div');
+    sub.className = 'hour-sub shortfall';
+    sub.textContent = shortfall;
+    row.appendChild(sub);
+  }
+
+  container.appendChild(row);
 }
 
 function renderGradeFlags(flags) {

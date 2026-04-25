@@ -159,6 +159,17 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
             "shortfall_message": shortfall,
         }
 
+    total_req = float(elig.get("total_hours_required", 0))
+    if total_req > 0:
+        total_earned = round(sum(float(c.get("credits", 0)) for c in courses), 1)
+        total_met = total_earned >= total_req
+        result["total"] = {
+            "required": total_req,
+            "earned": total_earned,
+            "met": total_met,
+            "shortfall_message": None if total_met else f"Need {total_req - total_earned:.0f} more total credit hours",
+        }
+
     return result
 
 
