@@ -67,6 +67,10 @@ def build_extraction_prompt(state_req: dict) -> str:
 For each course, assign a cpa_category from this list of recognized {state_name} CPA exam topics:
 {topic_lines}
 
+Two rules that override name-based guessing:
+- Department prefix: if the course prefix is clearly accounting-specific (e.g., ACCT, ACTG, ACCY, or a school-specific equivalent), assign an appropriate accounting category (financial_accounting, taxation, auditing, etc.) even if the course title is ambiguous
+- Information systems: use accounting_information_systems ONLY when the course name contains both an accounting reference ("Accounting", "ACCT") AND a systems/technology reference ("Information Systems", "Systems", "Technology"). Courses named "Business Information Systems", "Management Information Systems", "Business Technology", or similar without "Accounting" in the title should be general_business
+
 If a course does not match any topic above, use one of these fallback categories:
 - general_business — business courses not matching a specific topic above
 - other — anything that is clearly not business or accounting: humanities, sciences, PE, health, orientation, generic transfer credit placeholders (e.g., "199T", "ELEC 100", "TR CREDIT"), low-numbered courses (099–199) with no accounting/business connection, and any course whose name gives no indication it could be CPA-relevant
