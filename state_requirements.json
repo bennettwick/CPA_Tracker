@@ -8,6 +8,7 @@
         "undergraduate_hours_required": 27,
         "graduate_hours_required": 18,
         "combination_allowed": true,
+        "upper_level_only": true,
         "min_grade": "C",
         "required_topics": {
           "financial_accounting": {
@@ -86,6 +87,7 @@
         "undergraduate_hours_required": 24,
         "graduate_hours_required": 21,
         "combination_allowed": false,
+        "upper_level_only": true,
         "required_topics": {
           "financial_accounting": {
             "credits_required": 6,

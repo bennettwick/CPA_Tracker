@@ -63,16 +63,20 @@ def check_topic_requirements(courses: list, state_req: dict) -> list:
     results = []
 
     sections = []
-    if "accounting" in state_req["exam_eligibility"] and "required_topics" in state_req["exam_eligibility"]["accounting"]:
-        sections.append(state_req["exam_eligibility"]["accounting"]["required_topics"])
-    if "business" in state_req["exam_eligibility"] and "required_topics" in state_req["exam_eligibility"].get("business", {}):
-        sections.append(state_req["exam_eligibility"]["business"]["required_topics"])
+    elig = state_req["exam_eligibility"]
+    if "accounting" in elig and "required_topics" in elig["accounting"]:
+        sections.append((elig["accounting"], elig["accounting"]["required_topics"]))
+    if "business" in elig and "required_topics" in elig.get("business", {}):
+        sections.append((elig["business"], elig["business"]["required_topics"]))
 
     track = _detect_level_track(courses)
 
-    for topics in sections:
+    for section_def, topics in sections:
+        upper_only = section_def.get("upper_level_only", False)
         for topic_key, topic_def in topics.items():
             matching = [c for c in courses if c.get("cpa_category") == topic_key]
+            if upper_only:
+                matching = [c for c in matching if c.get("is_upper_level") is not False]
             earned = sum(float(c.get("credits", 0)) for c in matching)
 
             # Louisiana financial_accounting has different credits by level
@@ -105,6 +109,7 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
         req_ug = float(section.get("undergraduate_hours_required", 0))
         req_grad = float(section.get("graduate_hours_required", req_ug))
         combo_allowed = section.get("combination_allowed", True)
+        upper_only = section.get("upper_level_only", False)
 
         if section_name == "accounting":
             relevant_cats = ACCOUNTING_CATEGORIES
@@ -112,6 +117,8 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
             relevant_cats = BUSINESS_CATEGORIES
 
         relevant = [c for c in courses if c.get("cpa_category") in relevant_cats]
+        if upper_only:
+            relevant = [c for c in relevant if c.get("is_upper_level") is not False]
         earned_ug = sum(float(c.get("credits", 0)) for c in relevant if c.get("level") != "grad")
         earned_grad = sum(float(c.get("credits", 0)) for c in relevant if c.get("level") == "grad")
         earned_total = earned_ug + earned_grad

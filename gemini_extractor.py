@@ -22,6 +22,7 @@ COURSE_SCHEMA = """{
       "grade": "<letter grade or null>",
       "year": <four-digit year or null>,
       "level": "undergrad" or "grad" or null,
+      "is_upper_level": true or false or null,
       "cpa_category": "<category from the list above>"
     }
   ]
@@ -74,6 +75,12 @@ For the "level" field:
 - Use "grad" ONLY if the transcript explicitly marks the course as graduate-level (e.g., course number 5000+, "Graduate" section header, "G" prefix, or similar)
 - Use "undergrad" for all other courses
 - Use null only if the transcript gives no indication at all
+
+For the "is_upper_level" field:
+- Use true for upper-division undergraduate (course number 300-499 or 3000-4999) and all graduate courses
+- Use false for lower-division courses (course number 100-299 or 1000-2999), including "Principles of Accounting I/II", "Introduction to Accounting", "Survey of Accounting", or any course clearly labeled as introductory
+- Use null only if no course number is shown and the course name gives no clear indication of level
+- When in doubt based on name: "Intermediate", "Advanced", "Cost", "Auditing", "Tax", "Federal" → true; "Principles of", "Introduction to", "Intro to", "Survey of" → false
 
 Return ONLY valid JSON. No markdown. No code fences. No explanation. Start with {{ and end with }}.
 
