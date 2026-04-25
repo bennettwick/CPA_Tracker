@@ -36,18 +36,25 @@ def grade_value(grade: str) -> float:
 
 
 def _deduplicate_courses(courses: list) -> list:
-    """Keep only the highest-grade instance of each course name."""
-    seen = {}
+    seen = {}   # name -> index in result
+    result = []
     for c in courses:
         name = c.get("name", "").strip().lower()
+        this_val = grade_value(c.get("grade", ""))
         if name not in seen:
-            seen[name] = c
+            seen[name] = len(result)
+            result.append(c)
         else:
-            existing_val = grade_value(seen[name].get("grade", ""))
-            this_val = grade_value(c.get("grade", ""))
-            if this_val > existing_val:
-                seen[name] = c
-    return list(seen.values())
+            existing_idx = seen[name]
+            existing_val = grade_value(result[existing_idx].get("grade", ""))
+            # Only collapse as a retake when the prior attempt was a failing grade (D+ or below)
+            if this_val > existing_val and 0.0 <= existing_val <= 1.3:
+                result[existing_idx] = c
+            else:
+                # Separate enrollment in a repeatable course — preserve both
+                seen[name] = len(result)
+                result.append(c)
+    return result
 
 
 def _detect_level_track(courses: list) -> str:
