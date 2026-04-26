@@ -326,27 +326,65 @@ function renderLevelWarning(show) {
   document.getElementById('level-warning-card').style.display = show ? '' : 'none';
 }
 
+function getSemesterLabel(course) {
+  var validSems = { 'Fall': true, 'Spring': true, 'Summer': true, 'Winter': true };
+  var sem = (course.semester && validSems[course.semester]) ? course.semester : null;
+  var yr  = course.year ? String(course.year) : null;
+  if (sem && yr) return sem + ' ' + yr;
+  if (yr) return yr;
+  return 'Unknown';
+}
+
+function semesterSortKey(label) {
+  if (label === 'Unknown') return 999990;
+  var semOrder = { 'Spring': 1, 'Summer': 2, 'Fall': 3, 'Winter': 4 };
+  var parts = label.split(' ');
+  if (parts.length === 1) return (parseInt(parts[0]) || 9999) * 10;
+  return (parseInt(parts[1]) || 9999) * 10 + (semOrder[parts[0]] || 0);
+}
+
 function renderCoursesTable(courses) {
   var tbody = document.getElementById('courses-tbody');
   tbody.innerHTML = '';
-
   if (!courses || courses.length === 0) return;
 
+  // Group by semester label
+  var groups = {};
   courses.forEach(function(c) {
-    var tr = document.createElement('tr');
-    [
-      c.name || '—',
-      c.credits != null ? c.credits : '—',
-      c.grade  || '—',
-      c.year   || '—',
-      c.level  || '—',
-      formatTopicKey(c.cpa_category || 'other'),
-    ].forEach(function(val) {
-      var td = document.createElement('td');
-      td.textContent = val;
-      tr.appendChild(td);
+    var label = getSemesterLabel(c);
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(c);
+  });
+
+  // Sort semester labels chronologically
+  var labels = Object.keys(groups).sort(function(a, b) {
+    return semesterSortKey(a) - semesterSortKey(b);
+  });
+
+  labels.forEach(function(label) {
+    var headerTr = document.createElement('tr');
+    headerTr.className = 'semester-header';
+    var headerTd = document.createElement('td');
+    headerTd.colSpan = 5;
+    headerTd.textContent = label;
+    headerTr.appendChild(headerTd);
+    tbody.appendChild(headerTr);
+
+    groups[label].forEach(function(c) {
+      var tr = document.createElement('tr');
+      [
+        (c.code ? c.code + ': ' : '') + (c.name || '—'),
+        c.credits != null ? c.credits : '—',
+        c.grade  || '—',
+        c.level  || '—',
+        formatTopicKey(c.cpa_category || 'other'),
+      ].forEach(function(val) {
+        var td = document.createElement('td');
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
     });
-    tbody.appendChild(tr);
   });
 }
 

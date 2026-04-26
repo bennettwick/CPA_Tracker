@@ -9,7 +9,7 @@ and what's still needed.
 ## Tech Stack
 - **Backend:** Python, Flask
 - **Frontend:** HTML, CSS, vanilla JavaScript (no React)
-- **AI:** Google Gemini 2.0 Flash via google-generativeai Python SDK
+- **AI:** Google Gemini 2.5 Flash via google-generativeai Python SDK
 - **Data transport:** JSON
 - **No database** — stateless, process transcript fresh each time
 

@@ -18,10 +18,12 @@ COURSE_SCHEMA = """{
   "graduation_status": "conferred" or "in_progress" or "unknown",
   "courses": [
     {
-      "name": "<exact course name from transcript>",
+      "code": "<course code exactly as printed, e.g. ECON 400H3, or null>",
+      "name": "<course name only, without the course code>",
       "credits": <number>,
       "grade": "<letter grade or null>",
       "year": <four-digit year or null>,
+      "semester": "Fall" or "Spring" or "Summer" or "Winter" or null,
       "level": "undergrad" or "grad" or null,
       "is_upper_level": true or false or null,
       "cpa_category": "<category from the list above>"
@@ -99,10 +101,17 @@ Use this exact schema:
 
 Rules:
 - Include ALL courses on the transcript, not just accounting ones
-- Use the exact course name as printed on the transcript
+- A new course entry always begins with a course code (e.g., "ECON 400H3", "ACCT 3013"). If a course name wraps onto a second line in the PDF with no course code at the start of that line, that line is a continuation of the previous course name — join it with a space and do NOT create a new course entry for it. Example: if the PDF shows:
+    ECON 400H3  HONORS ECON COLLOQUIUM         3  A
+                FINANCIAL CRISES: ANALYSIS AND HISTORY
+    ECON 47503  FORECASTING                    3  B
+  the correct output is two courses: "HONORS ECON COLLOQUIUM FINANCIAL CRISES: ANALYSIS AND HISTORY" (ECON 400H3) and "FORECASTING" (ECON 47503). It would be wrong to create a third course named "FINANCIAL CRISES: ANALYSIS AND HISTORY"
+- code must be the course code exactly as printed (e.g., "ECON 400H3", "ACCT 3013"), or null if no course code appears on the transcript
+- name must be the course title only — do not include the course code in the name
 - credits must be a number (e.g., 3 or 3.0)
 - grade must be the letter grade shown (e.g., "A", "B+", "C-") or null if not shown
 - year must be the four-digit year the course was taken, or null if not shown
+- semester must be "Fall", "Spring", "Summer", or "Winter" — extract from the transcript's term label (e.g., "Fall 2025", "Spring Semester", "Autumn Quarter"). Use null if no term/semester label is shown
 - Do not invent or estimate credits — use only what the transcript states"""
 
 
