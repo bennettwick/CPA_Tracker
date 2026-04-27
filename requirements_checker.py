@@ -84,7 +84,7 @@ def check_topic_requirements(courses: list, state_req: dict) -> list:
             matching = [c for c in courses if c.get("cpa_category") == topic_key]
             if upper_only:
                 matching = [c for c in matching if c.get("is_upper_level") is not False]
-            earned = sum(float(c.get("credits", 0)) for c in matching)
+            earned = sum(float(c.get("credits") or 0) for c in matching)
 
             # Louisiana financial_accounting has different credits by level
             grad_credits_req = topic_def.get("graduate_credits_required")
@@ -126,8 +126,36 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
         relevant = [c for c in courses if c.get("cpa_category") in relevant_cats]
         if upper_only:
             relevant = [c for c in relevant if c.get("is_upper_level") is not False]
-        earned_ug = sum(float(c.get("credits", 0)) for c in relevant if c.get("level") != "grad")
-        earned_grad = sum(float(c.get("credits", 0)) for c in relevant if c.get("level") == "grad")
+
+        # Cap each required topic's contribution at its minimum credits_required.
+        # This prevents extra courses in one topic from inflating the total beyond
+        # what that topic can legitimately contribute toward the hours requirement.
+        track = _detect_level_track(relevant)
+        topic_caps: dict[str, float] = {}
+        for topic_key, topic_def in section.get("required_topics", {}).items():
+            grad_cap = topic_def.get("graduate_credits_required")
+            if grad_cap is not None and track == "grad":
+                topic_caps[topic_key] = float(grad_cap)
+            else:
+                topic_caps[topic_key] = float(topic_def.get("credits_required", 0))
+
+        topic_tally: dict[str, float] = {}
+        earned_ug = 0.0
+        earned_grad = 0.0
+        for c in relevant:
+            cat = c.get("cpa_category")
+            credits = float(c.get("credits") or 0)
+            if cat in topic_caps:
+                tally = topic_tally.get(cat, 0.0)
+                countable = min(credits, max(0.0, topic_caps[cat] - tally))
+                topic_tally[cat] = tally + credits
+            else:
+                countable = credits
+            if c.get("level") == "grad":
+                earned_grad += countable
+            else:
+                earned_ug += countable
+
         earned_total = earned_ug + earned_grad
 
         if combo_allowed:
@@ -190,7 +218,7 @@ def check_degree_conferred(
         }
 
     # Infer from credit count and requirement completion
-    total_earned = sum(float(c.get("credits", 0)) for c in courses)
+    total_earned = sum(float(c.get("credits") or 0) for c in courses)
     if total_earned < 120:
         return {
             "assumed_conferred": False,

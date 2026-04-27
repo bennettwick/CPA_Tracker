@@ -4,6 +4,8 @@ import traceback
 
 from flask import Flask, jsonify, render_template, request
 
+from google.genai import errors as genai_errors
+
 from gemini_extractor import GeminiParseError, call_gemini_with_retry
 from requirements_checker import check_requirements
 
@@ -53,6 +55,8 @@ def check():
         extraction = call_gemini_with_retry(pdf_bytes, state)
     except GeminiParseError as e:
         return jsonify({"error": str(e)}), 422
+    except genai_errors.ServerError:
+        return jsonify({"error": "Gemini is temporarily unavailable due to high demand. Please wait a moment and try again."}), 503
     except Exception:
         traceback.print_exc()
         return jsonify({"error": "An unexpected error occurred while analyzing your transcript. Please try again."}), 500
@@ -66,7 +70,30 @@ def check():
         traceback.print_exc()
         return jsonify({"error": "An unexpected error occurred while checking requirements. Please try again."}), 500
 
-    return jsonify({"courses": courses, "results": results})
+    return jsonify({"courses": courses, "results": results, "graduation_status": graduation_status})
+
+
+@app.route("/recalculate", methods=["POST"])
+def recalculate():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided."}), 400
+
+    courses = data.get("courses", [])
+    state = data.get("state", "").strip()
+    graduation_status = data.get("graduation_status", "unknown")
+
+    valid_states = [s.lower() for s in _load_state_keys()]
+    if state.lower() not in valid_states:
+        return jsonify({"error": "Invalid state."}), 400
+
+    try:
+        results = check_requirements(courses, state, graduation_status)
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"error": "An unexpected error occurred."}), 500
+
+    return jsonify({"results": results})
 
 
 if __name__ == "__main__":

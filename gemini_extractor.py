@@ -1,8 +1,10 @@
 import json
 import os
 import re
+import time
 
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from dotenv import load_dotenv
 
@@ -137,12 +139,21 @@ def _call_gemini_once(pdf_bytes: bytes, prompt: str) -> dict:
     return parse_gemini_response(response.text)
 
 
+def _call_gemini_with_503_retry(pdf_bytes: bytes, prompt: str) -> dict:
+    """Call Gemini once, retrying after 3 seconds on a transient 503 overload."""
+    try:
+        return _call_gemini_once(pdf_bytes, prompt)
+    except genai_errors.ServerError:
+        time.sleep(3)
+        return _call_gemini_once(pdf_bytes, prompt)
+
+
 def call_gemini_with_retry(pdf_bytes: bytes, state: str) -> dict:
     state_req = load_state_requirements(state)
     prompt = build_extraction_prompt(state_req)
 
     try:
-        return _call_gemini_once(pdf_bytes, prompt)
+        return _call_gemini_with_503_retry(pdf_bytes, prompt)
     except GeminiParseError:
         strict_prefix = (
             "IMPORTANT: Your previous response could not be parsed as JSON. "
@@ -150,7 +161,7 @@ def call_gemini_with_retry(pdf_bytes: bytes, state: str) -> dict:
             "Absolutely no markdown, no code fences, no explanation.\n\n"
         )
         try:
-            return _call_gemini_once(pdf_bytes, strict_prefix + prompt)
+            return _call_gemini_with_503_retry(pdf_bytes, strict_prefix + prompt)
         except GeminiParseError as e:
             raise GeminiParseError(
                 "Could not extract a valid course list from your transcript after two attempts. "

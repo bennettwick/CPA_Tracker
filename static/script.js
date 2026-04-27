@@ -64,7 +64,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
       return;
     }
 
-    renderResults(data.results, data.courses);
+    renderResults(data.results, data.courses, data.graduation_status);
     showSection('results');
 
   } catch (e) {
@@ -78,6 +78,9 @@ document.getElementById('upload-form').addEventListener('submit', async function
 document.getElementById('start-over-btn').addEventListener('click', function() {
   document.getElementById('upload-form').reset();
   _results = null;
+  _courses = null;
+  _graduation_status = 'unknown';
+  _openTopics = {};
   _degreeConferred = null;
   showSection('upload');
 });
@@ -110,12 +113,18 @@ document.getElementById('toggle-courses').addEventListener('click', function() {
 // ---- Results state ----
 
 var _results = null;
+var _courses = null;
+var _graduation_status = 'unknown';
+var _openTopics = {};
 var _degreeConferred = null;
 
 // ---- Render results ----
 
-function renderResults(results, courses) {
+function renderResults(results, courses, graduation_status) {
   _results = results;
+  _courses = courses;
+  _graduation_status = graduation_status || 'unknown';
+  _openTopics = {};
   _degreeConferred = results.degree_info ? results.degree_info.assumed_conferred : null;
 
   renderSummaryBanner();
@@ -126,7 +135,7 @@ function renderResults(results, courses) {
   renderUnclearCourses(results.unclear_courses);
   renderManualChecks(results.manual_checks);
   renderLevelWarning(results.level_detection_warning);
-  renderCoursesTable(courses);
+  renderCoursesTable(_courses);
 }
 
 function calcSummary() {
@@ -198,6 +207,13 @@ function renderTopicResults(topicResults) {
   topicResults.forEach(function(t) {
     var li = document.createElement('li');
 
+    // Clickable header row
+    var header = document.createElement('div');
+    header.className = 'topic-header';
+
+    var arrow = document.createElement('span');
+    arrow.className = 'topic-arrow';
+
     var nameSpan = document.createElement('span');
     nameSpan.className = 'topic-name';
     nameSpan.textContent = formatTopicKey(t.topic);
@@ -210,11 +226,148 @@ function renderTopicResults(topicResults) {
     badge.className = 'badge ' + (t.met ? 'met' : 'unmet');
     badge.textContent = t.met ? 'Met' : 'Not Met';
 
-    li.appendChild(nameSpan);
-    li.appendChild(credSpan);
-    li.appendChild(badge);
+    header.appendChild(arrow);
+    header.appendChild(nameSpan);
+    header.appendChild(credSpan);
+    header.appendChild(badge);
+
+    // Expandable body
+    var body = document.createElement('div');
+    body.className = 'topic-body';
+    buildTopicBody(body, t);
+
+    // Restore open/closed state across re-renders
+    var isOpen = !!_openTopics[t.topic];
+    body.style.display = isOpen ? '' : 'none';
+    arrow.textContent = isOpen ? '▼' : '▶';
+
+    header.addEventListener('click', function() {
+      var opening = body.style.display === 'none';
+      body.style.display = opening ? '' : 'none';
+      arrow.textContent = opening ? '▼' : '▶';
+      _openTopics[t.topic] = opening;
+    });
+
+    li.appendChild(header);
+    li.appendChild(body);
     ul.appendChild(li);
   });
+}
+
+function buildTopicBody(body, t) {
+  body.innerHTML = '';
+
+  // Course pills
+  var pillsDiv = document.createElement('div');
+  pillsDiv.className = 'topic-courses';
+
+  var courseNames = t.courses || [];
+  if (courseNames.length === 0) {
+    var empty = document.createElement('span');
+    empty.className = 'topic-empty';
+    empty.textContent = 'No courses assigned to this requirement.';
+    pillsDiv.appendChild(empty);
+  } else {
+    courseNames.forEach(function(courseName) {
+      var course = (_courses || []).find(function(c) { return c.name === courseName; });
+      pillsDiv.appendChild(buildCoursePill(courseName, course, t.topic));
+    });
+  }
+
+  // Add-course dropdown
+  var addWrap = document.createElement('div');
+  addWrap.className = 'topic-add-wrap';
+
+  var addSelect = document.createElement('select');
+  addSelect.className = 'topic-add-select';
+
+  var defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = '+ Add a course';
+  addSelect.appendChild(defaultOpt);
+
+  (_courses || []).forEach(function(c) {
+    if (c.cpa_category !== t.topic) {
+      var opt = document.createElement('option');
+      opt.value = c.name;
+      var prefix = c.code ? c.code + ': ' : '';
+      opt.textContent = prefix + c.name + ' (' + (c.credits || '?') + ' cr — ' + formatTopicKey(c.cpa_category || 'other') + ')';
+      addSelect.appendChild(opt);
+    }
+  });
+
+  addSelect.addEventListener('change', function() {
+    if (this.value) {
+      addCourseToTopic(this.value, t.topic);
+    }
+  });
+
+  addWrap.appendChild(addSelect);
+  body.appendChild(pillsDiv);
+  body.appendChild(addWrap);
+}
+
+function buildCoursePill(courseName, course, topicKey) {
+  var pill = document.createElement('span');
+  pill.className = 'course-pill';
+
+  var label = document.createElement('span');
+  var prefix = (course && course.code) ? course.code + ': ' : '';
+  var credits = course ? ' (' + course.credits + ' cr)' : '';
+  label.textContent = prefix + courseName + credits;
+
+  var removeBtn = document.createElement('button');
+  removeBtn.className = 'pill-remove';
+  removeBtn.textContent = '×';
+  removeBtn.title = 'Remove from this requirement';
+  removeBtn.addEventListener('click', function() {
+    removeCourseFromTopic(courseName, topicKey);
+  });
+
+  pill.appendChild(label);
+  pill.appendChild(removeBtn);
+  return pill;
+}
+
+function removeCourseFromTopic(courseName, topicKey) {
+  var course = (_courses || []).find(function(c) { return c.name === courseName; });
+  if (!course) return;
+  course.cpa_category = 'other';
+  recalculate();
+}
+
+function addCourseToTopic(courseName, topicKey) {
+  var course = (_courses || []).find(function(c) { return c.name === courseName; });
+  if (!course) return;
+  course.cpa_category = topicKey;
+  recalculate();
+}
+
+function recalculate() {
+  fetch('/recalculate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      courses: _courses,
+      state: _results.state,
+      graduation_status: _graduation_status
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.error) return;
+    _results = data.results;
+    renderSummaryBanner();
+    renderDegreeCard(_results.degree_info);
+    renderTopicResults(_results.topic_results);
+    renderHourTotals(_results.hour_totals);
+    renderGradeFlags(_results.grade_flags);
+    renderUnclearCourses(_results.unclear_courses);
+    renderManualChecks(_results.manual_checks);
+    renderLevelWarning(_results.level_detection_warning);
+    renderCoursesTable(_courses);
+  })
+  .catch(function() {});
 }
 
 function renderHourTotals(hourTotals) {
