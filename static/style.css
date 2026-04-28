@@ -427,6 +427,7 @@ nav {
   margin-bottom: 1rem;
 }
 .rcard:last-child { margin-bottom: 0; }
+.rcard.rcard-topics { overflow: visible; }
 .rcard-head {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-soft);
