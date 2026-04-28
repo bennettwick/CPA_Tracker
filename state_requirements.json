@@ -1,7 +1,7 @@
 {
   "arkansas": {
     "state": "Arkansas",
-    "board_url": "https://www.arkansaslegislature.gov/",
+    "board_url": "https://labor.arkansas.gov/licensing/state-board-of-public-accountancy/cpa-exam-website-changes/",
     "exam_eligibility": {
       "degree_required": true,
       "accounting": {
@@ -76,9 +76,73 @@
     }
   },
 
+  "texas": {
+    "state": "Texas",
+    "board_url": "https://www.tsbpa.texas.gov/applicants/education/",
+    "guidance_note": "Texas has two pathways to licensure depending on total credit hours completed. Licensure requirements vary per pathway, so we highly recommend reviewing Texas' official guidance before applying.",
+    "exam_eligibility": {
+      "degree_required": true,
+      "internship_credit_limit": 6,
+      "manual_notes": [
+        "A 3-hour ethics course is required for CPA certification but may be completed after passing the exam — it is not required to sit."
+      ],
+      "accounting": {
+        "undergraduate_hours_required": 24,
+        "combination_allowed": true,
+        "upper_level_only": true,
+        "cap_topics_at_required": false,
+        "required_topics": {
+          "financial_accounting": {
+            "credits_required": 3,
+            "aliases": [
+              "intermediate accounting",
+              "financial accounting",
+              "intermediate financial accounting",
+              "financial reporting"
+            ]
+          },
+          "management_accounting": {
+            "credits_required": 3,
+            "aliases": [
+              "cost accounting",
+              "managerial accounting",
+              "management accounting"
+            ]
+          },
+          "taxation": {
+            "credits_required": 3,
+            "aliases": [
+              "federal taxation",
+              "income tax",
+              "tax accounting",
+              "individual taxation",
+              "fundamentals of taxation"
+            ]
+          },
+          "auditing": {
+            "credits_required": 3,
+            "aliases": [
+              "auditing",
+              "attestation",
+              "auditing and attestation",
+              "principles of auditing",
+              "external auditing"
+            ]
+          }
+        }
+      },
+      "business": {
+        "undergraduate_hours_required": 21,
+        "combination_allowed": true,
+        "excluded_categories": ["ethics"],
+        "note": "21 hours of non-accounting business courses, not including accounting ethics. Max 6 hours of accounting or business internship may count here. Ethics (3 hrs) is required for certification, not for sitting."
+      }
+    }
+  },
+
   "louisiana": {
     "state": "Louisiana",
-    "board_url": "https://www.cpaboard.state.la.us/",
+    "board_url": "https://cpaboard.state.la.us/becoming-a-cpa/",
     "exam_eligibility": {
       "degree_required": true,
       "min_age": 18,

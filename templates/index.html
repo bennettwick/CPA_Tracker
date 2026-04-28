@@ -93,6 +93,7 @@
       <div>
         <div class="results-header-state" id="results-state-name"></div>
         <div class="results-header-msg" id="results-header-msg"></div>
+        <a id="guidance-link" class="results-guidance-link" href="" target="_blank" rel="noopener noreferrer" style="display:none">Official Guidance: <span id="guidance-url"></span></a>
       </div>
       <div class="rh-spacer"></div>
       <button class="restart-btn" id="start-over-btn" type="button">
@@ -100,6 +101,7 @@
         New Check
       </button>
     </div>
+    <div id="guidance-note-el" class="results-guidance-note" style="display:none"></div>
   </div>
 
   <div class="results-body">
@@ -256,7 +258,7 @@
 </section>
 
 <footer>
-  <p>This tool provides an estimate only. Always verify your eligibility with your state board of accountancy.</p>
+  <p><span class="footer-asterisk">*</span>This tool is provided for informational and educational purposes only. Results are generated using artificial intelligence and may be incomplete, inaccurate, or outdated. CPA exam eligibility requirements are subject to change and vary by individual circumstance. This tool does not constitute legal, professional, or academic advising of any kind. Always verify your eligibility directly with your state's Board of Accountancy before making any educational or financial decisions. The creators of this tool assume no liability for decisions made based on its output.</p>
 </footer>
 
 <script src="/static/script.js"></script>

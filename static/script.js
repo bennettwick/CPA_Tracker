@@ -38,6 +38,7 @@ function showSection(name) {
   upload.style.display  = name === 'upload'  ? 'flex'  : 'none';
   loading.style.display = name === 'loading' ? 'flex'  : 'none';
   results.style.display = name === 'results' ? 'block' : 'none';
+  document.body.classList.toggle('on-results', name === 'results');
 }
 
 // ============================================================
@@ -81,15 +82,16 @@ function renderStatus() {
   const cls = s === 'eligible' ? 'eligible' : s === 'needs_review' ? 'needs-review' : 'not-eligible';
   badge.className = 'status-badge-large ' + cls;
 
+  const asterisk = '<sup class="verdict-asterisk">*</sup>';
   if (s === 'eligible') {
     text.textContent = 'Eligible';
-    msg.textContent  = 'You appear to meet all exam eligibility requirements.';
+    msg.innerHTML    = 'You appear to meet all exam eligibility requirements.' + asterisk;
   } else if (s === 'needs_review') {
     text.textContent = 'Needs Review';
-    msg.textContent  = 'Some items need your review before a determination can be made.';
+    msg.innerHTML    = 'Some items need your review before a determination can be made.' + asterisk;
   } else {
     text.textContent = 'Not Yet Eligible';
-    msg.textContent  = 'You do not yet meet all exam eligibility requirements.';
+    msg.innerHTML    = 'You do not yet meet all exam eligibility requirements.' + asterisk;
   }
 }
 
@@ -473,6 +475,26 @@ function renderAll() {
   renderLevelWarn(_results.level_detection_warning);
   renderCoursesTable(_courses);
   document.getElementById('results-state-name').textContent = _results.state || '';
+
+  const guidanceLink = document.getElementById('guidance-link');
+  const guidanceUrl  = document.getElementById('guidance-url');
+  const boardUrl = (_results.board_url || '').trim();
+  if (boardUrl) {
+    guidanceLink.href = boardUrl;
+    guidanceUrl.textContent = boardUrl;
+    guidanceLink.style.display = '';
+  } else {
+    guidanceLink.style.display = 'none';
+  }
+
+  const guidanceNoteEl = document.getElementById('guidance-note-el');
+  const noteText = (_results.guidance_note || '').trim();
+  if (noteText) {
+    guidanceNoteEl.textContent = noteText;
+    guidanceNoteEl.style.display = '';
+  } else {
+    guidanceNoteEl.style.display = 'none';
+  }
 }
 
 // ============================================================

@@ -136,17 +136,24 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
         if upper_only:
             relevant = [c for c in relevant if c.get("is_upper_level") is not False]
 
+        excluded_cats = set(section.get("excluded_categories", []))
+        if excluded_cats:
+            relevant = [c for c in relevant if c.get("cpa_category") not in excluded_cats]
+
         # Cap each required topic's contribution at its minimum credits_required.
         # This prevents extra courses in one topic from inflating the total beyond
         # what that topic can legitimately contribute toward the hours requirement.
+        # Set cap_topics_at_required: false (e.g. Texas) to disable caps so that
+        # extra hours in a required topic still count toward the "selected" pool.
         track = _detect_level_track(relevant)
         topic_caps: dict[str, float] = {}
-        for topic_key, topic_def in section.get("required_topics", {}).items():
-            grad_cap = topic_def.get("graduate_credits_required")
-            if grad_cap is not None and track == "grad":
-                topic_caps[topic_key] = float(grad_cap)
-            else:
-                topic_caps[topic_key] = float(topic_def.get("credits_required", 0))
+        if section.get("cap_topics_at_required", True):
+            for topic_key, topic_def in section.get("required_topics", {}).items():
+                grad_cap = topic_def.get("graduate_credits_required")
+                if grad_cap is not None and track == "grad":
+                    topic_caps[topic_key] = float(grad_cap)
+                else:
+                    topic_caps[topic_key] = float(topic_def.get("credits_required", 0))
 
         topic_tally: dict[str, float] = {}
         earned_ug = 0.0
@@ -166,6 +173,25 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
                 earned_ug += countable
 
         earned_total = earned_ug + earned_grad
+
+        # Cap internship hours for states with an internship_credit_limit (e.g. Texas).
+        # Only applied to the business section — internship courses count toward business
+        # hours but no more than the limit across all internship credit in that section.
+        if section_name == "business":
+            internship_limit = elig.get("internship_credit_limit")
+            if internship_limit is not None:
+                limit = float(internship_limit)
+                internship_earned = sum(
+                    float(c.get("credits") or 0)
+                    for c in relevant
+                    if "internship" in (c.get("name") or "").lower()
+                )
+                excess = max(0.0, internship_earned - limit)
+                if excess > 0:
+                    ug_cut = min(earned_ug, excess)
+                    earned_ug -= ug_cut
+                    earned_grad = max(0.0, earned_grad - (excess - ug_cut))
+                    earned_total = earned_ug + earned_grad
 
         if combo_allowed:
             met = earned_total >= req_ug or earned_grad >= req_grad
@@ -228,6 +254,13 @@ def check_degree_conferred(
 
     # Infer from credit count and requirement completion
     total_earned = sum(float(c.get("credits") or 0) for c in courses)
+    internship_limit = state_req["exam_eligibility"].get("internship_credit_limit")
+    if internship_limit is not None:
+        total_internship = sum(
+            float(c.get("credits") or 0) for c in courses
+            if "internship" in (c.get("name") or "").lower()
+        )
+        total_earned = max(0.0, total_earned - max(0.0, total_internship - float(internship_limit)))
     if total_earned < 120:
         return {
             "assumed_conferred": False,
@@ -299,6 +332,7 @@ def collect_manual_checks(state_req: dict) -> list:
             f"You must have been a Louisiana resident for at least "
             f"{elig['residency_days_required']} days before applying."
         )
+    checks.extend(elig.get("manual_notes", []))
     return checks
 
 
@@ -342,4 +376,6 @@ def check_requirements(courses: list, state: str, graduation_status: str = "unkn
         "manual_checks": manual_checks,
         "degree_info": degree_info,
         "level_detection_warning": has_null_level and state.lower() == "louisiana",
+        "board_url": state_req.get("board_url", ""),
+        "guidance_note": state_req.get("guidance_note", ""),
     }
