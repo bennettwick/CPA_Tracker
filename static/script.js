@@ -487,14 +487,6 @@ function renderAll() {
     guidanceLink.style.display = 'none';
   }
 
-  const guidanceNoteEl = document.getElementById('guidance-note-el');
-  const noteText = (_results.guidance_note || '').trim();
-  if (noteText) {
-    guidanceNoteEl.textContent = noteText;
-    guidanceNoteEl.style.display = '';
-  } else {
-    guidanceNoteEl.style.display = 'none';
-  }
 }
 
 // ============================================================

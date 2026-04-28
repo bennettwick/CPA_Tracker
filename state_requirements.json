@@ -79,12 +79,12 @@
   "texas": {
     "state": "Texas",
     "board_url": "https://www.tsbpa.texas.gov/applicants/education/",
-    "guidance_note": "Texas has two pathways to licensure depending on total credit hours completed. Licensure requirements vary per pathway, so we highly recommend reviewing Texas' official guidance before applying.",
     "exam_eligibility": {
       "degree_required": true,
       "internship_credit_limit": 6,
       "manual_notes": [
-        "A 3-hour ethics course is required for CPA certification but may be completed after passing the exam — it is not required to sit."
+        "Texas has two pathways to licensure depending on total credit hours completed. Licensure requirements vary per pathway, so we highly recommend reviewing Texas' official guidance before applying.",
+        "A 3-hour ethics course is required for CPA certification but may be completed after passing the exam \u2014 it is not required to sit."
       ],
       "accounting": {
         "undergraduate_hours_required": 24,

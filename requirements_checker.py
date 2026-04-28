@@ -377,5 +377,4 @@ def check_requirements(courses: list, state: str, graduation_status: str = "unkn
         "degree_info": degree_info,
         "level_detection_warning": has_null_level and state.lower() == "louisiana",
         "board_url": state_req.get("board_url", ""),
-        "guidance_note": state_req.get("guidance_note", ""),
     }
