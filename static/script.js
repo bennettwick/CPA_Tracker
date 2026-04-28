@@ -165,23 +165,38 @@ function buildExpandBody(expand, t) {
     empty.textContent = 'No courses assigned to this requirement.';
     pills.appendChild(empty);
   } else {
-    t.courses.forEach(cn => {
-      const c = (_courses || []).find(x => x.name === cn);
+    // Track used indices so duplicate-named retakes each map to the right entry.
+    const usedIdx = new Set();
+    const eligibility = t.course_eligibility || [];
+    t.courses.forEach((cn, ci) => {
+      const isIneligible = eligibility[ci] === false;
+      let courseIdx = -1;
+      for (let i = 0; i < (_courses || []).length; i++) {
+        if (_courses[i].name === cn && _courses[i].cpa_category === t.topic && !usedIdx.has(i)) {
+          courseIdx = i;
+          break;
+        }
+      }
+      const c = courseIdx >= 0 ? _courses[courseIdx] : null;
+      if (courseIdx >= 0) usedIdx.add(courseIdx);
+
       const pill = document.createElement('span');
-      pill.className = 'course-pill';
+      pill.className = 'course-pill' + (isIneligible ? ' ineligible' : '');
+      if (isIneligible) {
+        pill.title = 'Not counted — this requirement only accepts upper-level courses.';
+      }
       const prefix = c && c.code ? c.code + ': ' : '';
       const cr     = c ? ' (' + c.credits + ' cr)' : '';
       const label = document.createElement('span');
-      label.textContent = prefix + cn + cr;
+      label.textContent = prefix + cn + cr + (isIneligible ? ' — lower-level, not counted' : '');
       const x = document.createElement('button');
       x.className = 'pill-x';
       x.title = 'Remove from this requirement';
       x.textContent = '×';
       x.addEventListener('click', e => {
         e.stopPropagation();
-        const course = (_courses || []).find(x => x.name === cn);
-        if (course) {
-          course.cpa_category = 'other';
+        if (courseIdx >= 0) {
+          _courses[courseIdx].cpa_category = 'other';
           recalculate();
         }
       });
@@ -191,32 +206,113 @@ function buildExpandBody(expand, t) {
     });
   }
 
-  const addSel = document.createElement('select');
-  addSel.className = 'add-course-select';
-  const def = document.createElement('option');
-  def.value = ''; def.textContent = '+ Add a course';
-  addSel.appendChild(def);
-  (_courses || []).forEach(c => {
-    if (c.cpa_category !== t.topic) {
-      const opt = document.createElement('option');
-      opt.value = c.name;
-      const prefix = c.code ? c.code + ': ' : '';
-      opt.textContent = prefix + c.name + ' (' + (c.credits != null ? c.credits : '?') + ' cr — ' + fmt(c.cpa_category || 'other') + ')';
-      addSel.appendChild(opt);
-    }
-  });
-  addSel.addEventListener('change', function () {
-    if (this.value) {
-      const course = (_courses || []).find(x => x.name === this.value);
-      if (course) {
-        course.cpa_category = t.topic;
-        recalculate();
+  expand.appendChild(pills);
+  expand.appendChild(buildAddCourseWidget(t));
+}
+
+function buildAddCourseWidget(t) {
+  const wrap = document.createElement('div');
+  wrap.className = 'add-course-wrap';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'add-course-btn';
+  btn.textContent = '+ Add a course';
+
+  const popup = document.createElement('div');
+  popup.className = 'add-course-popup';
+
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'add-course-search';
+  search.placeholder = 'Search by name or code…';
+
+  const list = document.createElement('div');
+  list.className = 'add-course-list';
+
+  // Sort all candidates alphabetically by code+name. Tag ineligible candidates so the
+  // dropdown shows *why* they won't count toward this requirement.
+  const upperOnly = !!t.upper_level_only;
+  const candidates = (_courses || [])
+    .map((c, idx) => ({ c, idx }))
+    .filter(({ c }) => c.cpa_category !== t.topic)
+    .map(({ c, idx }) => ({
+      c, idx,
+      ineligible: upperOnly && c.is_upper_level === false,
+    }))
+    .sort((a, b) => {
+      const la = ((a.c.code || '') + ' ' + (a.c.name || '')).toLowerCase();
+      const lb = ((b.c.code || '') + ' ' + (b.c.name || '')).toLowerCase();
+      return la.localeCompare(lb);
+    });
+
+  function renderList(filterText) {
+    list.innerHTML = '';
+    const f = (filterText || '').toLowerCase().trim();
+    let count = 0;
+    candidates.forEach(({ c, idx, ineligible }) => {
+      const labelText =
+        (c.code ? c.code + ': ' : '') +
+        c.name +
+        ' (' + (c.credits != null ? c.credits : '?') + ' cr — ' +
+        fmt(c.cpa_category || 'other') +
+        (ineligible ? ' — lower-level, not counted' : '') +
+        ')';
+      if (f && !labelText.toLowerCase().includes(f)) return;
+      count++;
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'add-course-option' + (ineligible ? ' ineligible' : '');
+      opt.textContent = labelText;
+      if (ineligible) {
+        opt.title = 'Will be assigned to this requirement, but won\'t count toward credits because it is not upper-level.';
       }
+      opt.addEventListener('click', e => {
+        e.stopPropagation();
+        // Use index, not name — names can collide when a student has duplicate enrollments.
+        _courses[idx].cpa_category = t.topic;
+        recalculate();
+      });
+      list.appendChild(opt);
+    });
+    if (count === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'add-course-empty';
+      empty.textContent = candidates.length === 0
+        ? 'No other courses available.'
+        : 'No matching courses.';
+      list.appendChild(empty);
+    }
+  }
+
+  search.addEventListener('input', () => renderList(search.value));
+  search.addEventListener('click', e => e.stopPropagation());
+  search.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      popup.classList.remove('open');
+      btn.focus();
     }
   });
 
-  expand.appendChild(pills);
-  expand.appendChild(addSel);
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const opening = !popup.classList.contains('open');
+    document.querySelectorAll('.add-course-popup.open').forEach(p => {
+      if (p !== popup) p.classList.remove('open');
+    });
+    popup.classList.toggle('open', opening);
+    if (opening) {
+      search.value = '';
+      renderList('');
+      setTimeout(() => search.focus(), 0);
+    }
+  });
+
+  popup.appendChild(search);
+  popup.appendChild(list);
+  wrap.appendChild(btn);
+  wrap.appendChild(popup);
+  return wrap;
 }
 
 // ============================================================
@@ -515,6 +611,13 @@ if (dz) {
     }
   });
 }
+
+// Close any open add-course popup on outside click.
+document.addEventListener('click', e => {
+  if (!e.target.closest || !e.target.closest('.add-course-wrap')) {
+    document.querySelectorAll('.add-course-popup.open').forEach(p => p.classList.remove('open'));
+  }
+});
 
 // ============================================================
 // INIT

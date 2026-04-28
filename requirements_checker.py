@@ -81,10 +81,17 @@ def check_topic_requirements(courses: list, state_req: dict) -> list:
     for section_def, topics in sections:
         upper_only = section_def.get("upper_level_only", False)
         for topic_key, topic_def in topics.items():
-            matching = [c for c in courses if c.get("cpa_category") == topic_key]
-            if upper_only:
-                matching = [c for c in matching if c.get("is_upper_level") is not False]
-            earned = sum(float(c.get("credits") or 0) for c in matching)
+            all_in_topic = [c for c in courses if c.get("cpa_category") == topic_key]
+            # Eligibility per course (parallel array). A course is ineligible only if the
+            # topic requires upper-level and the course is explicitly not upper-level.
+            eligibility = [
+                (not upper_only) or c.get("is_upper_level") is not False
+                for c in all_in_topic
+            ]
+            earned = sum(
+                float(c.get("credits") or 0)
+                for c, ok in zip(all_in_topic, eligibility) if ok
+            )
 
             # Louisiana financial_accounting has different credits by level
             grad_credits_req = topic_def.get("graduate_credits_required")
@@ -98,7 +105,9 @@ def check_topic_requirements(courses: list, state_req: dict) -> list:
                 "required_credits": required,
                 "earned_credits": round(earned, 1),
                 "met": earned >= required,
-                "courses": [c.get("name") for c in matching],
+                "courses": [c.get("name") for c in all_in_topic],
+                "course_eligibility": eligibility,
+                "upper_level_only": upper_only,
             })
 
     return results
