@@ -39,7 +39,7 @@ def _deduplicate_courses(courses: list) -> list:
     seen = {}   # name -> index in result
     result = []
     for c in courses:
-        name = c.get("name", "").strip().lower()
+        name = (c.get("name") or "").strip().lower()
         this_val = grade_value(c.get("grade", ""))
         if name not in seen:
             seen[name] = len(result)

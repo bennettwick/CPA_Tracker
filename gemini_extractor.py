@@ -1,18 +1,19 @@
+import base64
 import json
 import os
 import re
 import time
 
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
+_API_KEY = os.environ["GEMINI_API_KEY"]
 MODEL_NAME = "gemini-2.5-flash"
+_GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+)
 
 FALLBACK_CATEGORIES = ["general_business", "other", "unclear"]
 
@@ -35,6 +36,10 @@ COURSE_SCHEMA = """{
 
 
 class GeminiParseError(Exception):
+    pass
+
+
+class GeminiServerError(Exception):
     pass
 
 
@@ -129,21 +134,39 @@ def parse_gemini_response(raw_text: str) -> dict:
 
 
 def _call_gemini_once(pdf_bytes: bytes, prompt: str) -> dict:
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=[
-            types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
-            prompt,
-        ],
+    url = _GEMINI_URL.format(model=MODEL_NAME)
+    payload = {
+        "contents": [{
+            "parts": [
+                {
+                    "inline_data": {
+                        "mime_type": "application/pdf",
+                        "data": base64.b64encode(pdf_bytes).decode("utf-8"),
+                    }
+                },
+                {"text": prompt},
+            ]
+        }]
+    }
+    response = requests.post(
+        url,
+        params={"key": _API_KEY},
+        json=payload,
+        timeout=120,
     )
-    return parse_gemini_response(response.text)
+    if response.status_code == 503:
+        raise GeminiServerError("Gemini service temporarily unavailable.")
+    response.raise_for_status()
+    data = response.json()
+    text = data["candidates"][0]["content"]["parts"][0]["text"]
+    return parse_gemini_response(text)
 
 
 def _call_gemini_with_503_retry(pdf_bytes: bytes, prompt: str) -> dict:
     """Call Gemini once, retrying after 3 seconds on a transient 503 overload."""
     try:
         return _call_gemini_once(pdf_bytes, prompt)
-    except genai_errors.ServerError:
+    except GeminiServerError:
         time.sleep(3)
         return _call_gemini_once(pdf_bytes, prompt)
 

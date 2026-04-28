@@ -4,9 +4,7 @@ import traceback
 
 from flask import Flask, jsonify, render_template, request
 
-from google.genai import errors as genai_errors
-
-from gemini_extractor import GeminiParseError, call_gemini_with_retry
+from gemini_extractor import GeminiParseError, GeminiServerError, call_gemini_with_retry
 from requirements_checker import check_requirements
 
 app = Flask(__name__)
@@ -55,7 +53,7 @@ def check():
         extraction = call_gemini_with_retry(pdf_bytes, state)
     except GeminiParseError as e:
         return jsonify({"error": str(e)}), 422
-    except genai_errors.ServerError:
+    except GeminiServerError:
         return jsonify({"error": "Gemini is temporarily unavailable due to high demand. Please wait a moment and try again."}), 503
     except Exception:
         traceback.print_exc()
