@@ -1,150 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CPA Exam Eligibility Checker</title>
-  <link rel="stylesheet" href="/static/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPA Exam Eligibility Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-  <header>
-    <h1>CPA Exam Eligibility Checker</h1>
-    <p>Upload your college transcript to see if you meet your state's CPA exam requirements.</p>
-  </header>
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="/">
+    <div class="nav-logo">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M2 11.5 L6 5 L10 9 L13 6.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="6.5" r="1.75" fill="currentColor"/></svg>
+    </div>
+    <span class="nav-wordmark">CPA Tracker</span>
+  </a>
+  <div class="nav-divider"></div>
+  <span class="nav-title">Eligibility Checker</span>
+  <div class="nav-spacer"></div>
+</nav>
 
-  <main>
+<!-- UPLOAD -->
+<section id="upload-section">
+  <div class="upload-shell">
+    <div class="upload-eyebrow">
+      <div class="upload-eyebrow-dot"></div>
+      <span class="upload-eyebrow-text">Free eligibility check</span>
+    </div>
+    <h1 class="upload-title">Ready to sit for<br>the CPA Exam?</h1>
+    <p class="upload-sub">Upload your transcript and we'll analyze it against your state's requirements — in under 30 seconds.</p>
 
-    <!-- Upload Section -->
-    <section id="upload-section">
-      <div class="card">
-        <h2>Check Your Eligibility</h2>
-        <form id="upload-form">
-
-          <div class="form-group">
-            <label for="state-select">Select Your State</label>
-            <select id="state-select" name="state" required>
-              <option value="">Loading states...</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="transcript-input">Upload Transcript (PDF)</label>
-            <input type="file" id="transcript-input" name="transcript" accept=".pdf" required>
-            <span class="hint">Only PDF files are accepted. Max 10 MB.</span>
-          </div>
-
-          <div id="error-msg" class="error-msg" style="display:none"></div>
-
-          <button type="submit" id="submit-btn">Check Eligibility</button>
-
-        </form>
-      </div>
-    </section>
-
-    <!-- Loading Section -->
-    <section id="loading-section" style="display:none">
-      <div class="card center">
-        <div class="spinner"></div>
-        <p>Analyzing your transcript with AI&hellip;<br>This may take 15&ndash;30 seconds.</p>
-      </div>
-    </section>
-
-    <!-- Results Section -->
-    <section id="results-section" style="display:none">
-
-      <div id="summary-banner" class="summary-banner">
-        <span id="summary-icon"></span>
-        <span id="summary-text"></span>
-      </div>
-
-      <div class="results-grid">
-
-        <!-- Required Topics -->
-        <div class="card">
-          <h2>Required Course Topics</h2>
-          <ul id="topic-list" class="topic-list"></ul>
+    <div class="upload-card">
+      <div class="form-field">
+        <label for="state-select-v2">Your state</label>
+        <div class="select-wrap">
+          <select id="state-select-v2">
+            <option value="">Loading states…</option>
+          </select>
+          <svg class="select-chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
+      </div>
 
-        <!-- Requirements Summary -->
-        <div class="card">
-          <h2>Requirements Summary</h2>
-          <div id="hour-totals"></div>
-          <div id="degree-section" style="display:none">
-            <hr class="req-divider">
-            <div class="degree-question-row">
-              <div class="degree-question">
-                <div class="hour-label">Bachelor&#8217;s Degree Conferred?</div>
-                <p id="degree-note" class="degree-note"></p>
-              </div>
-              <div class="degree-toggle">
-                <button id="degree-yes-btn" class="toggle-btn">Yes</button>
-                <button id="degree-no-btn" class="toggle-btn">No</button>
-              </div>
+      <div class="form-field">
+        <label for="transcript-v2">Transcript PDF</label>
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" accept=".pdf" id="transcript-v2">
+          <div class="drop-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.5"/><path d="M14 2v6h6M12 12v6M9 15l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="drop-primary" id="drop-primary-text">Drop your PDF here</div>
+          <div class="drop-secondary">or click to browse · max 10 MB</div>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" type="button">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v8M8 1L5 4M8 1l3 3M1 12v1a2 2 0 002 2h10a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Analyze Transcript
+      </button>
+
+      <div id="error-msg" class="error-msg" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
+<!-- LOADING -->
+<section id="loading-section">
+  <div class="loading-inner">
+    <div class="loading-rings">
+      <svg viewBox="0 0 64 64" fill="none">
+        <circle class="ring-track-c" cx="32" cy="32" r="26" stroke-width="5"/>
+        <circle class="ring-fill" cx="32" cy="32" r="26" stroke="var(--copper)" stroke-width="5" stroke-dasharray="120 163" stroke-linecap="round" fill="none" style="transform-origin:32px 32px; animation: spin 1.1s linear infinite;"/>
+      </svg>
+    </div>
+    <div class="loading-label">Analyzing your transcript…</div>
+    <div class="loading-sub">AI is reviewing your courses against state requirements.<br>This takes about 15–30 seconds.</div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results-section">
+
+  <div class="results-header">
+    <div class="results-header-inner">
+      <div class="status-badge-large not-eligible" id="status-badge-large">
+        <div class="sdot"></div>
+        <span id="status-badge-text">Not Yet Eligible</span>
+      </div>
+      <div>
+        <div class="results-header-state" id="results-state-name"></div>
+        <div class="results-header-msg" id="results-header-msg"></div>
+      </div>
+      <div class="rh-spacer"></div>
+      <button class="restart-btn" id="start-over-btn" type="button">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 105-5H5M5 3L3 5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        New Check
+      </button>
+    </div>
+  </div>
+
+  <div class="results-body">
+
+    <!-- MAIN COLUMN -->
+    <div class="results-main">
+
+      <!-- Topics -->
+      <div class="rcard">
+        <div class="rcard-head">
+          <span class="rcard-title">Required Course Topics</span>
+        </div>
+        <div class="rcard-body" id="topic-list"></div>
+      </div>
+
+      <!-- Grade flags -->
+      <div class="rcard" id="grade-flags-card" style="display:none">
+        <div class="rcard-body-pad">
+          <div class="alert-rcard">
+            <div class="alert-dot warn"></div>
+            <div class="alert-content">
+              <h3>Grade Warnings</h3>
+              <p>The following required courses have a grade below the minimum required:</p>
+              <ul id="grade-flags-list"></ul>
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- Grade Flags -->
-      <div id="grade-flags-card" class="card warning-card" style="display:none">
-        <h2>&#9888; Grade Warnings</h2>
-        <p>The following required courses have a grade below the minimum required (C):</p>
-        <ul id="grade-flags-list"></ul>
+      <!-- Unclear -->
+      <div class="rcard" id="unclear-card" style="display:none">
+        <div class="rcard-body-pad">
+          <div class="alert-rcard">
+            <div class="alert-dot info"></div>
+            <div class="alert-content">
+              <h3>Courses Needing Review</h3>
+              <p>The AI could not categorize the following courses. Please review them manually:</p>
+              <ul id="unclear-list"></ul>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Unclear Courses -->
-      <div id="unclear-card" class="card warning-card" style="display:none">
-        <h2>&#10067; Courses Needing Review</h2>
-        <p>The AI could not categorize the following courses. Please review them manually to see if they meet any requirements:</p>
-        <ul id="unclear-list"></ul>
+      <!-- Manual checks -->
+      <div class="rcard" id="manual-checks-card" style="display:none">
+        <div class="rcard-body-pad">
+          <div class="alert-rcard">
+            <div class="alert-dot info"></div>
+            <div class="alert-content">
+              <h3>Manual Verification Required</h3>
+              <p>These requirements cannot be verified from a transcript:</p>
+              <ul id="manual-checks-list"></ul>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Manual Checks -->
-      <div id="manual-checks-card" class="card info-card" style="display:none">
-        <h2>&#8505; Manual Verification Required</h2>
-        <p>These requirements cannot be verified from a transcript:</p>
-        <ul id="manual-checks-list"></ul>
+      <!-- Level warning -->
+      <div class="rcard" id="level-warning-card" style="display:none">
+        <div class="rcard-body-pad">
+          <div class="alert-rcard">
+            <div class="alert-dot info"></div>
+            <div class="alert-content">
+              <h3>Course Level Note</h3>
+              <p>Some courses did not have a clear undergrad or graduate designation and were counted as undergrad. If some are actually graduate-level, your results may differ.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Level Detection Warning (Louisiana) -->
-      <div id="level-warning-card" class="card info-card" style="display:none">
-        <h2>&#8505; Course Level Note</h2>
-        <p>Some courses on your transcript did not have a clear undergrad or graduate designation. Louisiana does not allow mixing undergrad and grad credits, so those courses were counted as undergrad. If some are actually graduate-level, your results may differ.</p>
-      </div>
-
-      <!-- Extracted Courses (Collapsible) -->
-      <div class="card">
-        <button class="collapsible-btn" id="toggle-courses">Show All Extracted Courses &#9660;</button>
+      <!-- Courses Table -->
+      <div class="rcard">
+        <button class="courses-toggle-btn" id="toggle-courses" type="button">
+          <div class="ctb-icon" id="ctb-icon">
+            <svg viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span id="courses-toggle-label">Show All Courses</span>
+        </button>
         <div id="courses-table-wrap" style="display:none">
           <table id="courses-table">
-            <thead>
-              <tr>
-                <th>Course Name</th>
-                <th>Credits</th>
-                <th>Grade</th>
-                <th>Level</th>
-                <th>Category</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th>Course Name</th>
+              <th>Credits</th>
+              <th>Grade</th>
+              <th>Level</th>
+              <th>Category</th>
+            </tr></thead>
             <tbody id="courses-tbody"></tbody>
           </table>
         </div>
       </div>
 
-      <div class="center" style="margin-top: 1.5rem;">
-        <button id="start-over-btn">&#8592; Check Another Transcript</button>
+    </div><!-- /main -->
+
+    <!-- SIDEBAR -->
+    <div class="results-sidebar">
+
+      <div class="rcard">
+        <div class="rcard-head">
+          <span class="rcard-title">Requirements Summary</span>
+        </div>
+        <div id="hour-totals">
+          <!-- Accounting Hours -->
+          <div class="ring-row" id="ring-row-acct">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 92 92">
+                <circle class="ring-track-c" cx="46" cy="46" r="38"/>
+                <circle class="ring-fill-c unmet" id="ring-acct" cx="46" cy="46" r="38" stroke-dasharray="0 239"/>
+              </svg>
+              <div class="ring-label">
+                <span class="ring-num" id="ring-acct-num">0</span>
+                <span class="ring-den" id="ring-acct-den">/ 0</span>
+              </div>
+            </div>
+            <div class="ring-info">
+              <div class="ring-title">Accounting Hours</div>
+              <div class="ring-note" id="ring-acct-note"></div>
+            </div>
+          </div>
+          <!-- Business Hours -->
+          <div class="ring-row" id="ring-row-biz">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 92 92">
+                <circle class="ring-track-c" cx="46" cy="46" r="38"/>
+                <circle class="ring-fill-c unmet" id="ring-biz" cx="46" cy="46" r="38" stroke-dasharray="0 239"/>
+              </svg>
+              <div class="ring-label">
+                <span class="ring-num" id="ring-biz-num">0</span>
+                <span class="ring-den" id="ring-biz-den">/ 0</span>
+              </div>
+            </div>
+            <div class="ring-info">
+              <div class="ring-title">Business Hours</div>
+              <div class="ring-note" id="ring-biz-note"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Degree -->
+        <div class="degree-block" id="degree-section" style="display:none">
+          <div class="degree-q">Bachelor's Degree Conferred?</div>
+          <div class="degree-note-text" id="degree-note"></div>
+          <div class="toggle-pair">
+            <button class="tog" id="degree-yes-btn" type="button">Yes</button>
+            <button class="tog" id="degree-no-btn" type="button">No</button>
+          </div>
+        </div>
+
       </div>
 
-    </section>
+    </div><!-- /sidebar -->
 
-  </main>
+  </div><!-- /results-body -->
+</section>
 
-  <footer>
-    <p>This tool provides an estimate only. Always verify your eligibility with your state board of accountancy.</p>
-  </footer>
+<footer>
+  <p>This tool provides an estimate only. Always verify your eligibility with your state board of accountancy.</p>
+</footer>
 
-  <script src="/static/script.js"></script>
+<script src="/static/script.js"></script>
 </body>
 </html>

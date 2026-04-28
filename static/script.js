@@ -1,539 +1,360 @@
-// ---- Section helpers ----
+// ============================================================
+// STATE
+// ============================================================
+let _results = null;
+let _courses = null;
+let _graduation_status = 'unknown';
+let _degreeConferred = null;
+let _openTopics = {};
 
-function showSection(name) {
-  document.getElementById('upload-section').style.display  = name === 'upload'  ? '' : 'none';
-  document.getElementById('loading-section').style.display = name === 'loading' ? '' : 'none';
-  document.getElementById('results-section').style.display = name === 'results' ? '' : 'none';
+// ============================================================
+// HELPERS
+// ============================================================
+function fmt(key) {
+  if (!key) return '';
+  return String(key).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function semLabel(c) {
+  const ok = { Fall: 1, Spring: 1, Summer: 1, Winter: 1 };
+  const s = c.semester && ok[c.semester] ? c.semester : null;
+  const y = c.year ? String(c.year) : null;
+  if (s && y) return s + ' ' + y;
+  return y || 'Unknown';
+}
+function semSort(l) {
+  if (l === 'Unknown') return 999990;
+  const o = { Spring: 1, Summer: 2, Fall: 3, Winter: 4 };
+  const p = l.split(' ');
+  return p.length === 1 ? (parseInt(p[0]) || 9999) * 10 : (parseInt(p[1]) || 9999) * 10 + (o[p[0]] || 0);
 }
 
+// ============================================================
+// SECTION SWITCH
+// ============================================================
+function showSection(name) {
+  const upload  = document.getElementById('upload-section');
+  const loading = document.getElementById('loading-section');
+  const results = document.getElementById('results-section');
+  upload.style.display  = name === 'upload'  ? 'flex'  : 'none';
+  loading.style.display = name === 'loading' ? 'flex'  : 'none';
+  results.style.display = name === 'results' ? 'block' : 'none';
+}
+
+// ============================================================
+// ERROR DISPLAY
+// ============================================================
 function showError(msg) {
-  var el = document.getElementById('error-msg');
+  const el = document.getElementById('error-msg');
   el.textContent = msg;
   el.style.display = '';
 }
-
 function hideError() {
-  document.getElementById('error-msg').style.display = 'none';
+  const el = document.getElementById('error-msg');
+  if (el) el.style.display = 'none';
 }
 
-// ---- Populate state dropdown on load ----
-
-async function loadStates() {
-  try {
-    var res = await fetch('/states');
-    var data = await res.json();
-    var select = document.getElementById('state-select');
-    select.innerHTML = '<option value="">-- Select a state --</option>';
-    data.states.forEach(function(s) {
-      var opt = document.createElement('option');
-      opt.value = s;
-      opt.textContent = s;
-      select.appendChild(opt);
-    });
-  } catch (e) {
-    document.getElementById('state-select').innerHTML =
-      '<option value="">Could not load states</option>';
-  }
-}
-
-// ---- Form submit ----
-
-document.getElementById('upload-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  hideError();
-
-  var file = document.getElementById('transcript-input').files[0];
-  var state = document.getElementById('state-select').value;
-
-  if (!state) { showError('Please select a state.'); return; }
-  if (!file)  { showError('Please select a PDF transcript.'); return; }
-
-  var formData = new FormData();
-  formData.append('transcript', file);
-  formData.append('state', state);
-
-  showSection('loading');
-
-  try {
-    var res = await fetch('/check', { method: 'POST', body: formData });
-    var data = await res.json();
-
-    if (!res.ok || data.error) {
-      showSection('upload');
-      showError(data.error || 'An unexpected error occurred. Please try again.');
-      return;
-    }
-
-    renderResults(data.results, data.courses, data.graduation_status);
-    showSection('results');
-
-  } catch (e) {
-    showSection('upload');
-    showError('Network error. Please check your connection and try again.');
-  }
-});
-
-// ---- Start over ----
-
-document.getElementById('start-over-btn').addEventListener('click', function() {
-  document.getElementById('upload-form').reset();
-  _results = null;
-  _courses = null;
-  _graduation_status = 'unknown';
-  _openTopics = {};
-  _degreeConferred = null;
-  showSection('upload');
-});
-
-// ---- Degree conferred toggle ----
-
-document.getElementById('degree-yes-btn').addEventListener('click', function() {
-  _degreeConferred = true;
-  updateDegreeToggleUI(true);
-  renderSummaryBanner();
-});
-
-document.getElementById('degree-no-btn').addEventListener('click', function() {
-  _degreeConferred = false;
-  updateDegreeToggleUI(false);
-  renderSummaryBanner();
-});
-
-// ---- Toggle extracted courses table ----
-
-document.getElementById('toggle-courses').addEventListener('click', function() {
-  var wrap = document.getElementById('courses-table-wrap');
-  var isHidden = wrap.style.display === 'none';
-  wrap.style.display = isHidden ? '' : 'none';
-  this.innerHTML = isHidden
-    ? 'Hide Extracted Courses &#9650;'
-    : 'Show All Extracted Courses &#9660;';
-});
-
-// ---- Results state ----
-
-var _results = null;
-var _courses = null;
-var _graduation_status = 'unknown';
-var _openTopics = {};
-var _degreeConferred = null;
-
-// ---- Render results ----
-
-function renderResults(results, courses, graduation_status) {
-  _results = results;
-  _courses = courses;
-  _graduation_status = graduation_status || 'unknown';
-  _openTopics = {};
-  _degreeConferred = results.degree_info ? results.degree_info.assumed_conferred : null;
-
-  renderSummaryBanner();
-  renderDegreeCard(results.degree_info);
-  renderTopicResults(results.topic_results);
-  renderHourTotals(results.hour_totals);
-  renderGradeFlags(results.grade_flags);
-  renderUnclearCourses(results.unclear_courses);
-  renderManualChecks(results.manual_checks);
-  renderLevelWarning(results.level_detection_warning);
-  renderCoursesTable(_courses);
-}
-
+// ============================================================
+// SUMMARY CALC
+// ============================================================
 function calcSummary() {
   if (!_results) return 'not_eligible';
-
-  if (_results.degree_info) {
-    if (!_degreeConferred) return 'not_eligible';
-  }
-  if (_results.grade_flags && _results.grade_flags.length > 0) return 'needs_review';
-  if (_results.unclear_courses && _results.unclear_courses.length > 0) return 'needs_review';
-
-  var allTopicsMet = (_results.topic_results || []).every(function(t) { return t.met; });
-  var allHoursMet = true;
+  if (_results.degree_info && !_degreeConferred) return 'not_eligible';
+  if ((_results.grade_flags || []).length > 0) return 'needs_review';
+  if ((_results.unclear_courses || []).length > 0) return 'needs_review';
+  const topicsMet = (_results.topic_results || []).every(t => t.met);
+  let hoursMet = true;
   if (_results.hour_totals) {
-    Object.keys(_results.hour_totals).forEach(function(k) {
-      if (!_results.hour_totals[k].met) allHoursMet = false;
-    });
+    Object.values(_results.hour_totals).forEach(h => { if (!h.met) hoursMet = false; });
   }
-  return (allTopicsMet && allHoursMet) ? 'eligible' : 'not_eligible';
+  return (topicsMet && hoursMet) ? 'eligible' : 'not_eligible';
 }
 
-function renderSummaryBanner() {
-  var summary = calcSummary();
-  var banner  = document.getElementById('summary-banner');
-  var icon    = document.getElementById('summary-icon');
-  var text    = document.getElementById('summary-text');
-  var state   = _results ? _results.state : '';
+// ============================================================
+// RENDER STATUS BADGE + NAV PILL
+// ============================================================
+function renderStatus() {
+  const s = calcSummary();
+  const badge = document.getElementById('status-badge-large');
+  const text  = document.getElementById('status-badge-text');
+  const msg   = document.getElementById('results-header-msg');
 
-  banner.className = 'summary-banner';
-  if (summary === 'eligible') {
-    banner.classList.add('eligible');
-    icon.textContent = '✓';
-    text.textContent = state + ': You appear to meet the exam eligibility requirements.';
-  } else if (summary === 'needs_review') {
-    banner.classList.add('needs-review');
-    icon.textContent = '⚠';
-    text.textContent = state + ': Some items need your review before a determination can be made.';
+  const cls = s === 'eligible' ? 'eligible' : s === 'needs_review' ? 'needs-review' : 'not-eligible';
+  badge.className = 'status-badge-large ' + cls;
+
+  if (s === 'eligible') {
+    text.textContent = 'Eligible';
+    msg.textContent  = 'You appear to meet all exam eligibility requirements.';
+  } else if (s === 'needs_review') {
+    text.textContent = 'Needs Review';
+    msg.textContent  = 'Some items need your review before a determination can be made.';
   } else {
-    banner.classList.add('not-eligible');
-    icon.textContent = '✗';
-    text.textContent = state + ': You do not yet meet all exam eligibility requirements.';
+    text.textContent = 'Not Yet Eligible';
+    msg.textContent  = 'You do not yet meet all exam eligibility requirements.';
   }
 }
 
-function renderDegreeCard(degreeInfo) {
-  var section = document.getElementById('degree-section');
-  if (!degreeInfo) { section.style.display = 'none'; return; }
-  section.style.display = '';
-  document.getElementById('degree-note').textContent = degreeInfo.note;
-  updateDegreeToggleUI(_degreeConferred);
-}
-
-function updateDegreeToggleUI(conferred) {
-  var yesBtn = document.getElementById('degree-yes-btn');
-  var noBtn  = document.getElementById('degree-no-btn');
-  yesBtn.className = 'toggle-btn' + (conferred === true  ? ' active-yes' : '');
-  noBtn.className  = 'toggle-btn' + (conferred === false ? ' active-no'  : '');
-}
-
-function renderTopicResults(topicResults) {
-  var ul = document.getElementById('topic-list');
-  ul.innerHTML = '';
-
+// ============================================================
+// RENDER TOPICS
+// ============================================================
+function renderTopics(topicResults) {
+  const container = document.getElementById('topic-list');
+  container.innerHTML = '';
   if (!topicResults || topicResults.length === 0) {
-    ul.innerHTML = '<li>No required topics found for this state.</li>';
+    const empty = document.createElement('div');
+    empty.style.padding = '1rem 1.5rem';
+    empty.style.fontSize = '0.85rem';
+    empty.style.color = 'var(--ink-muted)';
+    empty.textContent = 'No required topics found for this state.';
+    container.appendChild(empty);
     return;
   }
+  topicResults.forEach(t => {
+    const pct = t.required_credits > 0
+      ? Math.min(100, Math.round(t.earned_credits / t.required_credits * 100))
+      : 0;
 
-  topicResults.forEach(function(t) {
-    var li = document.createElement('li');
+    const row = document.createElement('div');
+    row.className = 'topic-row' + (_openTopics[t.topic] ? ' open' : '');
 
-    // Clickable header row
-    var header = document.createElement('div');
-    header.className = 'topic-header';
+    const arrow = document.createElement('span');
+    arrow.className = 'topic-row-arrow';
+    arrow.innerHTML = '<svg viewBox="0 0 11 11" fill="none"><path d="M3 2l4 3.5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-    var arrow = document.createElement('span');
-    arrow.className = 'topic-arrow';
+    const name = document.createElement('span');
+    name.className = 'topic-row-name';
+    name.textContent = fmt(t.topic);
 
-    var nameSpan = document.createElement('span');
-    nameSpan.className = 'topic-name';
-    nameSpan.textContent = formatTopicKey(t.topic);
+    const miniBar = document.createElement('div');
+    miniBar.className = 'topic-mini-bar';
+    miniBar.innerHTML = '<div class="topic-mini-fill ' + (t.met ? 'met' : 'unmet') + '" style="width:' + pct + '%"></div>';
 
-    var credSpan = document.createElement('span');
-    credSpan.className = 'topic-credits';
-    credSpan.textContent = t.earned_credits + ' / ' + t.required_credits + ' cr';
+    const cred = document.createElement('span');
+    cred.className = 'topic-row-cred';
+    cred.textContent = t.earned_credits + ' / ' + t.required_credits + ' cr';
 
-    var badge = document.createElement('span');
-    badge.className = 'badge ' + (t.met ? 'met' : 'unmet');
+    const badge = document.createElement('span');
+    badge.className = 'tbadge ' + (t.met ? 'met' : 'unmet');
     badge.textContent = t.met ? 'Met' : 'Not Met';
 
-    header.appendChild(arrow);
-    header.appendChild(nameSpan);
-    header.appendChild(credSpan);
-    header.appendChild(badge);
+    row.append(arrow, name, miniBar, cred, badge);
 
-    // Expandable body
-    var body = document.createElement('div');
-    body.className = 'topic-body';
-    buildTopicBody(body, t);
+    const expand = document.createElement('div');
+    expand.className = 'topic-expand' + (_openTopics[t.topic] ? ' open' : '');
+    buildExpandBody(expand, t);
 
-    // Restore open/closed state across re-renders
-    var isOpen = !!_openTopics[t.topic];
-    body.style.display = isOpen ? '' : 'none';
-    arrow.textContent = isOpen ? '▼' : '▶';
-
-    header.addEventListener('click', function() {
-      var opening = body.style.display === 'none';
-      body.style.display = opening ? '' : 'none';
-      arrow.textContent = opening ? '▼' : '▶';
+    row.addEventListener('click', () => {
+      const opening = !expand.classList.contains('open');
+      expand.classList.toggle('open', opening);
+      row.classList.toggle('open', opening);
       _openTopics[t.topic] = opening;
     });
 
-    li.appendChild(header);
-    li.appendChild(body);
-    ul.appendChild(li);
+    container.appendChild(row);
+    container.appendChild(expand);
   });
 }
 
-function buildTopicBody(body, t) {
-  body.innerHTML = '';
+function buildExpandBody(expand, t) {
+  expand.innerHTML = '';
+  const pills = document.createElement('div');
+  pills.className = 'te-pills';
 
-  // Course pills
-  var pillsDiv = document.createElement('div');
-  pillsDiv.className = 'topic-courses';
-
-  var courseNames = t.courses || [];
-  if (courseNames.length === 0) {
-    var empty = document.createElement('span');
-    empty.className = 'topic-empty';
+  if (!t.courses || t.courses.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'te-empty';
     empty.textContent = 'No courses assigned to this requirement.';
-    pillsDiv.appendChild(empty);
+    pills.appendChild(empty);
   } else {
-    courseNames.forEach(function(courseName) {
-      var course = (_courses || []).find(function(c) { return c.name === courseName; });
-      pillsDiv.appendChild(buildCoursePill(courseName, course, t.topic));
+    t.courses.forEach(cn => {
+      const c = (_courses || []).find(x => x.name === cn);
+      const pill = document.createElement('span');
+      pill.className = 'course-pill';
+      const prefix = c && c.code ? c.code + ': ' : '';
+      const cr     = c ? ' (' + c.credits + ' cr)' : '';
+      const label = document.createElement('span');
+      label.textContent = prefix + cn + cr;
+      const x = document.createElement('button');
+      x.className = 'pill-x';
+      x.title = 'Remove from this requirement';
+      x.textContent = '×';
+      x.addEventListener('click', e => {
+        e.stopPropagation();
+        const course = (_courses || []).find(x => x.name === cn);
+        if (course) {
+          course.cpa_category = 'other';
+          recalculate();
+        }
+      });
+      pill.appendChild(label);
+      pill.appendChild(x);
+      pills.appendChild(pill);
     });
   }
 
-  // Add-course dropdown
-  var addWrap = document.createElement('div');
-  addWrap.className = 'topic-add-wrap';
-
-  var addSelect = document.createElement('select');
-  addSelect.className = 'topic-add-select';
-
-  var defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = '+ Add a course';
-  addSelect.appendChild(defaultOpt);
-
-  (_courses || []).forEach(function(c) {
+  const addSel = document.createElement('select');
+  addSel.className = 'add-course-select';
+  const def = document.createElement('option');
+  def.value = ''; def.textContent = '+ Add a course';
+  addSel.appendChild(def);
+  (_courses || []).forEach(c => {
     if (c.cpa_category !== t.topic) {
-      var opt = document.createElement('option');
+      const opt = document.createElement('option');
       opt.value = c.name;
-      var prefix = c.code ? c.code + ': ' : '';
-      opt.textContent = prefix + c.name + ' (' + (c.credits || '?') + ' cr — ' + formatTopicKey(c.cpa_category || 'other') + ')';
-      addSelect.appendChild(opt);
+      const prefix = c.code ? c.code + ': ' : '';
+      opt.textContent = prefix + c.name + ' (' + (c.credits != null ? c.credits : '?') + ' cr — ' + fmt(c.cpa_category || 'other') + ')';
+      addSel.appendChild(opt);
     }
   });
-
-  addSelect.addEventListener('change', function() {
+  addSel.addEventListener('change', function () {
     if (this.value) {
-      addCourseToTopic(this.value, t.topic);
+      const course = (_courses || []).find(x => x.name === this.value);
+      if (course) {
+        course.cpa_category = t.topic;
+        recalculate();
+      }
     }
   });
 
-  addWrap.appendChild(addSelect);
-  body.appendChild(pillsDiv);
-  body.appendChild(addWrap);
+  expand.appendChild(pills);
+  expand.appendChild(addSel);
 }
 
-function buildCoursePill(courseName, course, topicKey) {
-  var pill = document.createElement('span');
-  pill.className = 'course-pill';
-
-  var label = document.createElement('span');
-  var prefix = (course && course.code) ? course.code + ': ' : '';
-  var credits = course ? ' (' + course.credits + ' cr)' : '';
-  label.textContent = prefix + courseName + credits;
-
-  var removeBtn = document.createElement('button');
-  removeBtn.className = 'pill-remove';
-  removeBtn.textContent = '×';
-  removeBtn.title = 'Remove from this requirement';
-  removeBtn.addEventListener('click', function() {
-    removeCourseFromTopic(courseName, topicKey);
-  });
-
-  pill.appendChild(label);
-  pill.appendChild(removeBtn);
-  return pill;
-}
-
-function removeCourseFromTopic(courseName, topicKey) {
-  var course = (_courses || []).find(function(c) { return c.name === courseName; });
-  if (!course) return;
-  course.cpa_category = 'other';
-  recalculate();
-}
-
-function addCourseToTopic(courseName, topicKey) {
-  var course = (_courses || []).find(function(c) { return c.name === courseName; });
-  if (!course) return;
-  course.cpa_category = topicKey;
-  recalculate();
-}
-
-function recalculate() {
-  fetch('/recalculate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      courses: _courses,
-      state: _results.state,
-      graduation_status: _graduation_status
-    })
-  })
-  .then(function(res) { return res.json(); })
-  .then(function(data) {
-    if (data.error) return;
-    _results = data.results;
-    renderSummaryBanner();
-    renderDegreeCard(_results.degree_info);
-    renderTopicResults(_results.topic_results);
-    renderHourTotals(_results.hour_totals);
-    renderGradeFlags(_results.grade_flags);
-    renderUnclearCourses(_results.unclear_courses);
-    renderManualChecks(_results.manual_checks);
-    renderLevelWarning(_results.level_detection_warning);
-    renderCoursesTable(_courses);
-  })
-  .catch(function() {});
-}
-
-function renderHourTotals(hourTotals) {
-  var container = document.getElementById('hour-totals');
-  container.innerHTML = '';
+// ============================================================
+// RENDER HOURS (rings)
+// ============================================================
+function renderHours(hourTotals) {
   if (!hourTotals) return;
+  const R = 38, CIRC = 2 * Math.PI * R;
+  ['accounting', 'business'].forEach(key => {
+    const h = hourTotals[key];
+    const prefix = key === 'accounting' ? 'acct' : 'biz';
+    const rowEl  = document.getElementById('ring-row-' + prefix);
+    if (!h) {
+      if (rowEl) rowEl.style.display = 'none';
+      return;
+    }
+    if (rowEl) rowEl.style.display = '';
+    const target = h.required_undergrad || h.required_grad || 1;
+    const pct = Math.min(1, h.earned_total / target);
+    const dash = (pct * CIRC).toFixed(1);
 
-  ['accounting', 'business'].forEach(function(section) {
-    var h = hourTotals[section];
-    if (!h) return;
-    var label = section.charAt(0).toUpperCase() + section.slice(1) + ' Hours';
-    var target = h.required_undergrad || h.required_grad;
-    renderHourBar(container, label, h.earned_total, target, h.met ? 'met' : 'unmet', h.shortfall_message);
+    const ringEl = document.getElementById('ring-' + prefix);
+    if (ringEl) {
+      ringEl.setAttribute('stroke-dasharray', dash + ' ' + CIRC);
+      ringEl.setAttribute('class', 'ring-fill-c ' + (h.met ? 'met' : 'unmet'));
+    }
+    const numEl  = document.getElementById('ring-' + prefix + '-num');
+    const denEl  = document.getElementById('ring-' + prefix + '-den');
+    const noteEl = document.getElementById('ring-' + prefix + '-note');
+    if (numEl)  numEl.textContent  = h.earned_total;
+    if (denEl)  denEl.textContent  = '/ ' + target;
+    if (noteEl) {
+      if (h.shortfall_message) {
+        noteEl.textContent = h.shortfall_message;
+        noteEl.className   = 'ring-note shortfall';
+      } else if (h.earned_total > target) {
+        noteEl.textContent = (h.earned_total - target) + ' hours over requirement';
+        noteEl.className   = 'ring-note surplus';
+      } else {
+        noteEl.textContent = 'Requirement met';
+        noteEl.className   = 'ring-note surplus';
+      }
+    }
   });
 }
 
-function renderHourBar(container, label, earned, required, colorClass, shortfall) {
-  var pct = required > 0 ? Math.min(100, Math.round((earned / required) * 100)) : 0;
-
-  var row = document.createElement('div');
-  row.className = 'hour-row';
-
-  var labelEl = document.createElement('div');
-  labelEl.className = 'hour-label';
-  labelEl.textContent = label;
-
-  var barWrap = document.createElement('div');
-  barWrap.className = 'progress-bar-wrap';
-
-  var bar = document.createElement('div');
-  bar.className = 'progress-bar ' + colorClass;
-  bar.style.width = pct + '%';
-  barWrap.appendChild(bar);
-
-  var numLabel = document.createElement('div');
-  numLabel.className = 'hour-numeric';
-  numLabel.textContent = earned + ' / ' + required;
-
-  row.appendChild(labelEl);
-  row.appendChild(barWrap);
-  row.appendChild(numLabel);
-
-  if (shortfall) {
-    var sub = document.createElement('div');
-    sub.className = 'hour-sub shortfall';
-    sub.textContent = shortfall;
-    row.appendChild(sub);
-  }
-
-  container.appendChild(row);
+// ============================================================
+// RENDER DEGREE
+// ============================================================
+function renderDegree(degreeInfo) {
+  const sec = document.getElementById('degree-section');
+  if (!degreeInfo) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  document.getElementById('degree-note').textContent = degreeInfo.note;
+  updateDegreeUI(_degreeConferred);
+}
+function updateDegreeUI(val) {
+  document.getElementById('degree-yes-btn').className = 'tog' + (val === true  ? ' active-yes' : '');
+  document.getElementById('degree-no-btn').className  = 'tog' + (val === false ? ' active-no'  : '');
 }
 
+// ============================================================
+// RENDER ALERT CARDS
+// ============================================================
 function renderGradeFlags(flags) {
-  var card = document.getElementById('grade-flags-card');
-  var ul   = document.getElementById('grade-flags-list');
+  const card = document.getElementById('grade-flags-card');
+  const ul   = document.getElementById('grade-flags-list');
   ul.innerHTML = '';
-
-  if (!flags || flags.length === 0) {
-    card.style.display = 'none';
-    return;
-  }
-
+  if (!flags || flags.length === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
-  flags.forEach(function(f) {
-    var li = document.createElement('li');
+  flags.forEach(f => {
+    const li = document.createElement('li');
     li.textContent = f.name + ' — Grade: ' + (f.grade || 'N/A') +
-      ' (minimum required: ' + f.min_required + ', topic: ' + formatTopicKey(f.topic) + ')';
+      ' (minimum required: ' + f.min_required + ', topic: ' + fmt(f.topic) + ')';
     ul.appendChild(li);
   });
 }
-
-function renderUnclearCourses(unclear) {
-  var card = document.getElementById('unclear-card');
-  var ul   = document.getElementById('unclear-list');
+function renderUnclear(list) {
+  const card = document.getElementById('unclear-card');
+  const ul   = document.getElementById('unclear-list');
   ul.innerHTML = '';
-
-  if (!unclear || unclear.length === 0) {
-    card.style.display = 'none';
-    return;
-  }
-
+  if (!list || list.length === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
-  unclear.forEach(function(c) {
-    var li = document.createElement('li');
-    li.textContent = c.name + ' (' + (c.credits || '?') + ' cr)';
+  list.forEach(c => {
+    const li = document.createElement('li');
+    li.textContent = c.name + ' (' + (c.credits != null ? c.credits : '?') + ' cr)';
     ul.appendChild(li);
   });
 }
-
-function renderManualChecks(checks) {
-  var card = document.getElementById('manual-checks-card');
-  var ul   = document.getElementById('manual-checks-list');
+function renderManual(checks) {
+  const card = document.getElementById('manual-checks-card');
+  const ul   = document.getElementById('manual-checks-list');
   ul.innerHTML = '';
-
-  if (!checks || checks.length === 0) {
-    card.style.display = 'none';
-    return;
-  }
-
+  if (!checks || checks.length === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
-  checks.forEach(function(c) {
-    var li = document.createElement('li');
+  checks.forEach(c => {
+    const li = document.createElement('li');
     li.textContent = c;
     ul.appendChild(li);
   });
 }
-
-function renderLevelWarning(show) {
+function renderLevelWarn(show) {
   document.getElementById('level-warning-card').style.display = show ? '' : 'none';
 }
 
-function getSemesterLabel(course) {
-  var validSems = { 'Fall': true, 'Spring': true, 'Summer': true, 'Winter': true };
-  var sem = (course.semester && validSems[course.semester]) ? course.semester : null;
-  var yr  = course.year ? String(course.year) : null;
-  if (sem && yr) return sem + ' ' + yr;
-  if (yr) return yr;
-  return 'Unknown';
-}
-
-function semesterSortKey(label) {
-  if (label === 'Unknown') return 999990;
-  var semOrder = { 'Spring': 1, 'Summer': 2, 'Fall': 3, 'Winter': 4 };
-  var parts = label.split(' ');
-  if (parts.length === 1) return (parseInt(parts[0]) || 9999) * 10;
-  return (parseInt(parts[1]) || 9999) * 10 + (semOrder[parts[0]] || 0);
-}
-
+// ============================================================
+// RENDER COURSES TABLE
+// ============================================================
 function renderCoursesTable(courses) {
-  var tbody = document.getElementById('courses-tbody');
+  const tbody = document.getElementById('courses-tbody');
   tbody.innerHTML = '';
   if (!courses || courses.length === 0) return;
-
-  // Group by semester label
-  var groups = {};
-  courses.forEach(function(c) {
-    var label = getSemesterLabel(c);
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(c);
+  const groups = {};
+  courses.forEach(c => {
+    const l = semLabel(c);
+    if (!groups[l]) groups[l] = [];
+    groups[l].push(c);
   });
-
-  // Sort semester labels chronologically
-  var labels = Object.keys(groups).sort(function(a, b) {
-    return semesterSortKey(a) - semesterSortKey(b);
-  });
-
-  labels.forEach(function(label) {
-    var headerTr = document.createElement('tr');
-    headerTr.className = 'semester-header';
-    var headerTd = document.createElement('td');
-    headerTd.colSpan = 5;
-    headerTd.textContent = label;
-    headerTr.appendChild(headerTd);
-    tbody.appendChild(headerTr);
-
-    groups[label].forEach(function(c) {
-      var tr = document.createElement('tr');
-      [
+  Object.keys(groups).sort((a, b) => semSort(a) - semSort(b)).forEach(label => {
+    const htr = document.createElement('tr');
+    htr.className = 'semester-header';
+    const htd = document.createElement('td');
+    htd.colSpan = 5;
+    htd.textContent = label;
+    htr.appendChild(htd);
+    tbody.appendChild(htr);
+    groups[label].forEach(c => {
+      const tr = document.createElement('tr');
+      const cells = [
         (c.code ? c.code + ': ' : '') + (c.name || '—'),
         c.credits != null ? c.credits : '—',
-        c.grade  || '—',
-        c.level  || '—',
-        formatTopicKey(c.cpa_category || 'other'),
-      ].forEach(function(val) {
-        var td = document.createElement('td');
-        td.textContent = val;
+        c.grade || '—',
+        c.level || '—',
+        fmt(c.cpa_category || 'other'),
+      ];
+      cells.forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v;
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -541,12 +362,162 @@ function renderCoursesTable(courses) {
   });
 }
 
-// ---- Helpers ----
-
-function formatTopicKey(key) {
-  if (!key) return '';
-  return key.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+// ============================================================
+// FULL RENDER
+// ============================================================
+function renderAll() {
+  if (!_results) return;
+  renderStatus();
+  renderTopics(_results.topic_results);
+  renderHours(_results.hour_totals);
+  renderDegree(_results.degree_info);
+  renderGradeFlags(_results.grade_flags);
+  renderUnclear(_results.unclear_courses);
+  renderManual(_results.manual_checks);
+  renderLevelWarn(_results.level_detection_warning);
+  renderCoursesTable(_courses);
+  document.getElementById('results-state-name').textContent = _results.state || '';
 }
 
-// ---- Init ----
+// ============================================================
+// RECALCULATE — POST to /recalculate
+// ============================================================
+function recalculate() {
+  fetch('/recalculate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      courses: _courses,
+      state: _results.state,
+      graduation_status: _graduation_status,
+    }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) return;
+      _results = data.results;
+      renderAll();
+    })
+    .catch(() => {});
+}
+
+// ============================================================
+// LOAD STATES
+// ============================================================
+async function loadStates() {
+  const sel = document.getElementById('state-select-v2');
+  try {
+    const res  = await fetch('/states');
+    const data = await res.json();
+    sel.innerHTML = '<option value="">Select a state…</option>';
+    (data.states || []).forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+  } catch {
+    sel.innerHTML = '<option value="">Could not load states</option>';
+  }
+}
+
+// ============================================================
+// SUBMIT
+// ============================================================
+async function handleSubmit() {
+  hideError();
+  const state = document.getElementById('state-select-v2').value;
+  const file  = document.getElementById('transcript-v2').files[0];
+
+  if (!state) { showError('Please select a state.'); return; }
+  if (!file)  { showError('Please select a PDF transcript.'); return; }
+
+  const fd = new FormData();
+  fd.append('transcript', file);
+  fd.append('state', state);
+
+  showSection('loading');
+
+  try {
+    const res  = await fetch('/check', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showSection('upload');
+      showError(data.error || 'An unexpected error occurred. Please try again.');
+      return;
+    }
+    _results = data.results;
+    _courses = data.courses;
+    _graduation_status = data.graduation_status || 'unknown';
+    _openTopics = {};
+    _degreeConferred = _results.degree_info ? _results.degree_info.assumed_conferred : null;
+    renderAll();
+    showSection('results');
+  } catch {
+    showSection('upload');
+    showError('Network error. Please check your connection and try again.');
+  }
+}
+
+// ============================================================
+// EVENT WIRING
+// ============================================================
+document.getElementById('submit-btn').addEventListener('click', handleSubmit);
+
+document.getElementById('degree-yes-btn').addEventListener('click', () => {
+  _degreeConferred = true;
+  updateDegreeUI(true);
+  renderStatus();
+});
+document.getElementById('degree-no-btn').addEventListener('click', () => {
+  _degreeConferred = false;
+  updateDegreeUI(false);
+  renderStatus();
+});
+
+document.getElementById('toggle-courses').addEventListener('click', function () {
+  const wrap = document.getElementById('courses-table-wrap');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? '' : 'none';
+  document.getElementById('ctb-icon').classList.toggle('open', open);
+  document.getElementById('courses-toggle-label').textContent = open ? 'Hide Courses' : 'Show All Courses';
+});
+
+document.getElementById('start-over-btn').addEventListener('click', () => {
+  _results = null;
+  _courses = null;
+  _graduation_status = 'unknown';
+  _openTopics = {};
+  _degreeConferred = null;
+
+  const fileInput = document.getElementById('transcript-v2');
+  fileInput.value = '';
+  document.getElementById('drop-zone').classList.remove('has-file');
+  document.getElementById('drop-primary-text').textContent = 'Drop your PDF here';
+  document.getElementById('state-select-v2').value = '';
+  hideError();
+
+  showSection('upload');
+});
+
+// Drop zone cosmetics
+const dz = document.getElementById('drop-zone');
+if (dz) {
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',      e => { e.preventDefault(); dz.classList.remove('drag-over'); });
+  document.getElementById('transcript-v2').addEventListener('change', function () {
+    if (this.files[0]) {
+      dz.classList.add('has-file');
+      document.getElementById('drop-primary-text').textContent = this.files[0].name;
+    } else {
+      dz.classList.remove('has-file');
+      document.getElementById('drop-primary-text').textContent = 'Drop your PDF here';
+    }
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+showSection('upload');
 loadStates();
