@@ -102,6 +102,42 @@
     }
   },
 
+  "oklahoma": {
+    "state": "Oklahoma",
+    "board_url": "https://www.ok.gov/oab/",
+    "exam_eligibility": {
+      "degree_required": true,
+      "manual_notes": [
+        "Your degree must be from a board-recognized, regionally accredited four-year institution."
+      ],
+      "accounting": {
+        "undergraduate_hours_required": 24,
+        "combination_allowed": true,
+        "upper_level_only": true,
+        "cap_topics_at_required": false,
+        "note": "24 semester hours of accounting above principles/introductory level. Principles of Accounting I, II, and other introductory courses do not count.",
+        "required_topics": {
+          "auditing": {
+            "credits_required": 3,
+            "aliases": [
+              "auditing",
+              "assurance",
+              "audit and assurance",
+              "principles of auditing",
+              "external auditing"
+            ]
+          }
+        }
+      },
+      "business": {
+        "undergraduate_hours_required": 9,
+        "combination_allowed": true,
+        "upper_level_only": true,
+        "note": "9 semester hours of upper-level business courses. Acceptable courses include economics, statistics, business law, finance, management, marketing, business communication, risk management, insurance, MIS, and computer science."
+      }
+    }
+  },
+
   "louisiana": {
     "state": "Louisiana",
     "board_url": "https://cpaboard.state.la.us/becoming-a-cpa/",
