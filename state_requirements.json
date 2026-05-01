@@ -140,6 +140,31 @@
     }
   },
 
+  "missouri": {
+    "state": "Missouri",
+    "board_url": "https://www.mocpa.org/candidates/exam-req",
+    "exam_eligibility": {
+      "degree_required": true,
+      "min_age": 18,
+      "internship_combined_credit_limit": 9,
+      "manual_notes": [
+        "You must be of good moral character as determined by the Missouri State Board of Accountancy."
+      ],
+      "accounting": {
+        "undergraduate_hours_required": 24,
+        "combination_allowed": true,
+        "upper_level_only": true,
+        "note": "24 semester hours of upper-level accounting courses. Should include content in taxation, ethics, auditing, and other CPA Exam Blueprint areas. Acceptable courses include advanced accounting, cost accounting, intermediate accounting, accounting information systems, managerial accounting, governmental accounting, nonprofit accounting, and financial reporting."
+      },
+      "business": {
+        "undergraduate_hours_required": 24,
+        "combination_allowed": true,
+        "any_non_accounting": true,
+        "note": "24 semester hours of business courses. Acceptable courses include business law, management, economics, marketing, finance, organizational behavior, business communications, statistics, and business analytics."
+      }
+    }
+  },
+
   "louisiana": {
     "state": "Louisiana",
     "board_url": "https://cpaboard.state.la.us/becoming-a-cpa/",

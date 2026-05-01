@@ -14,6 +14,17 @@ function fmt(key) {
   if (!key) return '';
   return String(key).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
+const _KNOWN_CATEGORIES = new Set([
+  'financial_accounting','management_accounting','governmental_nonprofit',
+  'taxation','auditing','accounting_information_systems','accounting_elective',
+  'upper_division_accounting','general_business','business_law','ethics',
+  'other','unclear',
+]);
+function displayCategory(cat) {
+  if (!cat || cat === 'general_business') return 'Business';
+  if (!_KNOWN_CATEGORIES.has(cat)) return 'Business';
+  return fmt(cat);
+}
 function semLabel(c) {
   const ok = { Fall: 1, Spring: 1, Summer: 1, Winter: 1 };
   const s = c.semester && ok[c.semester] ? c.semester : null;
@@ -84,15 +95,13 @@ function renderStatus() {
 
   const asterisk = '<sup class="verdict-asterisk">*</sup>';
   if (s === 'eligible') {
-    text.textContent = 'Eligible';
-    msg.innerHTML    = 'You appear to meet all exam eligibility requirements.' + asterisk;
+    text.innerHTML = 'Eligible' + asterisk;
   } else if (s === 'needs_review') {
-    text.textContent = 'Needs Review';
-    msg.innerHTML    = 'Some items need your review before a determination can be made.' + asterisk;
+    text.innerHTML = 'Needs Review' + asterisk;
   } else {
-    text.textContent = 'Not Yet Eligible';
-    msg.innerHTML    = 'You do not yet meet all exam eligibility requirements.' + asterisk;
+    text.innerHTML = 'Not Yet Eligible' + asterisk;
   }
+  msg.style.display = 'none';
 }
 
 // ============================================================
@@ -257,7 +266,7 @@ function buildAddCourseWidget(t) {
         (c.code ? c.code + ': ' : '') +
         c.name +
         ' (' + (c.credits != null ? c.credits : '?') + ' cr — ' +
-        fmt(c.cpa_category || 'other') +
+        displayCategory(c.cpa_category) +
         (ineligible ? ' — lower-level, not counted' : '') +
         ')';
       if (f && !labelText.toLowerCase().includes(f)) return;
@@ -448,7 +457,7 @@ function renderCoursesTable(courses) {
         c.credits != null ? c.credits : '—',
         c.grade || '—',
         c.level || '—',
-        fmt(c.cpa_category || 'other'),
+        displayCategory(c.cpa_category),
       ];
       cells.forEach(v => {
         const td = document.createElement('td');

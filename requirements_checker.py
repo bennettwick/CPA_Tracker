@@ -113,9 +113,43 @@ def check_topic_requirements(courses: list, state_req: dict) -> list:
     return results
 
 
+def _section_met_shortfall(
+    earned_ug: float, earned_grad: float,
+    req_ug: float, req_grad: float,
+    combo_allowed: bool, section_name: str,
+) -> tuple:
+    earned_total = earned_ug + earned_grad
+    if combo_allowed:
+        met = earned_total >= req_ug or earned_grad >= req_grad
+        shortfall = None
+        if not met:
+            if req_grad and earned_grad > 0:
+                shortfall = f"Need {req_grad - earned_grad:.0f} more grad OR {req_ug - earned_total:.0f} more total {section_name} hours"
+            else:
+                shortfall = f"Need {req_ug - earned_total:.0f} more {section_name} hours"
+    else:
+        ug_met = earned_ug >= req_ug
+        grad_met = req_grad > 0 and earned_grad >= req_grad
+        met = ug_met or grad_met
+        shortfall = None
+        if not met:
+            ug_short = req_ug - earned_ug
+            grad_short = req_grad - earned_grad if req_grad else None
+            if grad_short is not None:
+                shortfall = (
+                    f"Undergrad track: need {ug_short:.0f} more hours. "
+                    f"Grad track: need {grad_short:.0f} more hours. "
+                    f"Cannot mix undergrad and grad credits."
+                )
+            else:
+                shortfall = f"Need {ug_short:.0f} more undergrad {section_name} hours."
+    return met, shortfall
+
+
 def check_hour_totals(courses: list, state_req: dict) -> dict:
     result = {}
     elig = state_req["exam_eligibility"]
+    section_internship: dict[str, float] = {}
 
     for section_name in ("accounting", "business"):
         section = elig.get(section_name)
@@ -132,7 +166,16 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
         else:
             relevant_cats = BUSINESS_CATEGORIES
 
-        relevant = [c for c in courses if c.get("cpa_category") in relevant_cats]
+        if section_name == "business" and section.get("any_non_accounting"):
+            # Count every non-accounting, non-other/unclear course (handles non-standard
+            # Gemini category labels like "finance" or "marketing" that aren't in BUSINESS_CATEGORIES).
+            relevant = [
+                c for c in courses
+                if c.get("cpa_category") not in ACCOUNTING_CATEGORIES
+                and c.get("cpa_category") not in {"other", "unclear", None}
+            ]
+        else:
+            relevant = [c for c in courses if c.get("cpa_category") in relevant_cats]
         if upper_only:
             relevant = [c for c in relevant if c.get("is_upper_level") is not False]
 
@@ -174,9 +217,8 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
 
         earned_total = earned_ug + earned_grad
 
-        # Cap internship hours for states with an internship_credit_limit (e.g. Texas).
-        # Only applied to the business section — internship courses count toward business
-        # hours but no more than the limit across all internship credit in that section.
+        # Texas-style per-section cap: internship counts toward business hours only,
+        # up to internship_credit_limit (those credits are also excluded from 120hr total).
         if section_name == "business":
             internship_limit = elig.get("internship_credit_limit")
             if internship_limit is not None:
@@ -193,30 +235,16 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
                     earned_grad = max(0.0, earned_grad - (excess - ug_cut))
                     earned_total = earned_ug + earned_grad
 
-        if combo_allowed:
-            met = earned_total >= req_ug or earned_grad >= req_grad
-            shortfall = None
-            if not met:
-                if req_grad and earned_grad > 0:
-                    shortfall = f"Need {req_grad - earned_grad:.0f} more grad OR {req_ug - earned_total:.0f} more total {section_name} hours"
-                else:
-                    shortfall = f"Need {req_ug - earned_total:.0f} more {section_name} hours"
-        else:
-            ug_met = earned_ug >= req_ug
-            grad_met = req_grad > 0 and earned_grad >= req_grad
-            met = ug_met or grad_met
-            shortfall = None
-            if not met:
-                ug_short = req_ug - earned_ug
-                grad_short = req_grad - earned_grad if req_grad else None
-                if grad_short is not None:
-                    shortfall = (
-                        f"Undergrad track: need {ug_short:.0f} more hours. "
-                        f"Grad track: need {grad_short:.0f} more hours. "
-                        f"Cannot mix undergrad and grad credits."
-                    )
-                else:
-                    shortfall = f"Need {ug_short:.0f} more undergrad {section_name} hours."
+        # Track internship credits included in this section (used for combined cap below).
+        section_internship[section_name] = sum(
+            float(c.get("credits") or 0)
+            for c in relevant
+            if "internship" in (c.get("name") or "").lower()
+        )
+
+        met, shortfall = _section_met_shortfall(
+            earned_ug, earned_grad, req_ug, req_grad, combo_allowed, section_name
+        )
 
         result[section_name] = {
             "required_undergrad": req_ug,
@@ -228,6 +256,35 @@ def check_hour_totals(courses: list, state_req: dict) -> dict:
             "met": met,
             "shortfall_message": shortfall,
         }
+
+    # Combined internship cap across both sections (e.g. Missouri: up to 9 hrs total
+    # toward the combined 48-hour accounting + business requirement).
+    combined_limit = elig.get("internship_combined_credit_limit")
+    if combined_limit is not None:
+        total_internship_used = sum(section_internship.get(s, 0.0) for s in result)
+        excess = max(0.0, total_internship_used - float(combined_limit))
+        if excess > 0:
+            for sec_name in ("business", "accounting"):
+                if excess <= 0 or sec_name not in result:
+                    continue
+                sec = result[sec_name]
+                cut = min(sec["earned_total"], excess)
+                if cut <= 0:
+                    continue
+                ug_cut = min(sec["earned_undergrad"], cut)
+                new_ug = sec["earned_undergrad"] - ug_cut
+                new_grad = max(0.0, sec["earned_grad"] - (cut - ug_cut))
+                new_met, new_shortfall = _section_met_shortfall(
+                    new_ug, new_grad,
+                    sec["required_undergrad"], sec["required_grad"],
+                    sec["combination_allowed"], sec_name,
+                )
+                sec["earned_undergrad"] = round(new_ug, 1)
+                sec["earned_grad"] = round(new_grad, 1)
+                sec["earned_total"] = round(new_ug + new_grad, 1)
+                sec["met"] = new_met
+                sec["shortfall_message"] = new_shortfall
+                excess -= cut
 
     return result
 
@@ -260,7 +317,9 @@ def check_degree_conferred(
             float(c.get("credits") or 0) for c in courses
             if "internship" in (c.get("name") or "").lower()
         )
-        total_earned = max(0.0, total_earned - max(0.0, total_internship - float(internship_limit)))
+        # Internship credits don't count toward the 120hr sitting requirement at all.
+        # They can still count toward business hours (up to internship_credit_limit).
+        total_earned = max(0.0, total_earned - total_internship)
     if total_earned < 120:
         return {
             "assumed_conferred": False,
