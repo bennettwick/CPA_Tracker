@@ -134,6 +134,7 @@
       "business": {
         "undergraduate_hours_required": 21,
         "combination_allowed": true,
+        "upper_level_only": true,
         "excluded_categories": ["ethics"],
         "note": "21 hours of non-accounting business courses, not including accounting ethics. Max 6 hours of accounting or business internship may count here. Ethics (3 hrs) is required for certification, not for sitting."
       }
