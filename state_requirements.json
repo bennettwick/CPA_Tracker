@@ -133,6 +133,7 @@
         "undergraduate_hours_required": 9,
         "combination_allowed": true,
         "upper_level_only": true,
+        "any_non_accounting": true,
         "note": "9 semester hours of upper-level business courses. Acceptable courses include economics, statistics, business law, finance, management, marketing, business communication, risk management, insurance, MIS, and computer science."
       }
     }
