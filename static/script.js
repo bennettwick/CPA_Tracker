@@ -486,11 +486,9 @@ function renderAll() {
   document.getElementById('results-state-name').textContent = _results.state || '';
 
   const guidanceLink = document.getElementById('guidance-link');
-  const guidanceUrl  = document.getElementById('guidance-url');
   const boardUrl = (_results.board_url || '').trim();
   if (boardUrl) {
     guidanceLink.href = boardUrl;
-    guidanceUrl.textContent = boardUrl;
     guidanceLink.style.display = '';
   } else {
     guidanceLink.style.display = 'none';
