@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CPA Exam Eligibility Checker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -62,6 +59,8 @@
         Analyze Transcript
       </button>
 
+      <p class="upload-note">Your PDF is processed only for this eligibility check. It is sent through the app owner's Gemini API key and is not stored by CPA Tracker after the request completes.</p>
+
       <div id="error-msg" class="error-msg" style="display:none"></div>
     </div>
   </div>
@@ -77,7 +76,7 @@
       </svg>
     </div>
     <div class="loading-label">Analyzing your transcript…</div>
-    <div class="loading-sub">We are reviewing your courses against state requirements.<br>This takes about 30-60 seconds.</div>
+    <div class="loading-sub">We are reviewing your courses against state requirements.<br>This may take about a minute.</div>
   </div>
 </section>
 
@@ -151,7 +150,6 @@
             <div class="alert-dot info"></div>
             <div class="alert-content">
               <h3>Manual Verification Required</h3>
-              <p>These requirements cannot be verified from a transcript:</p>
               <ul id="manual-checks-list"></ul>
             </div>
           </div>

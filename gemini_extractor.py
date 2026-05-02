@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_API_KEY = os.environ["GEMINI_API_KEY"]
+_API_KEY = os.environ.get("GEMINI_API_KEY")
+if not _API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is not set. Add it to your .env file.")
 MODEL_NAME = "gemini-2.5-flash"
 _GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -156,9 +158,22 @@ def _call_gemini_once(pdf_bytes: bytes, prompt: str) -> dict:
     )
     if response.status_code == 503:
         raise GeminiServerError("Gemini service temporarily unavailable.")
-    response.raise_for_status()
+    if response.status_code == 429:
+        raise GeminiServerError("Gemini is rate-limited due to high demand. Please wait a moment and try again.")
+    if not response.ok:
+        raise GeminiServerError(
+            f"Gemini request failed with status {response.status_code}."
+        )
     data = response.json()
-    text = data["candidates"][0]["content"]["parts"][0]["text"]
+    candidates = data.get("candidates", [])
+    if not candidates:
+        raise GeminiParseError("Gemini returned no output — the transcript may have triggered a content filter. Try a different PDF.")
+    candidate = candidates[0]
+    content = candidate.get("content")
+    if not content:
+        finish = candidate.get("finishReason", "UNKNOWN")
+        raise GeminiParseError(f"Gemini did not return usable content (reason: {finish}). Please try again.")
+    text = content["parts"][0]["text"]
     return parse_gemini_response(text)
 
 
